@@ -21,6 +21,10 @@ servers:
 tags:
   - name: Users
     description: User management operations
+  - name: Customer auth
+    description: Customer login with Google or SMS code, session refresh and logout
+  - name: Customer
+    description: Logged-in customer profile and addresses
 
 paths:
   /users:
@@ -211,8 +215,643 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /auth/customer/otp/request:
+    post:
+      tags:
+        - Customer auth
+      summary: Request an SMS login code
+      operationId: requestCustomerOtpCode
+      description: Sends a 6-digit code by SMS (simulated). When the demo mode is on, the code is returned as `debugCode`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+      responses:
+        '200':
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpRequestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/customer/otp/verify:
+    post:
+      tags:
+        - Customer auth
+      summary: Log in with an SMS code
+      operationId: loginCustomerWithOtp
+      description: Verifies the code, signs the customer up on the first login and starts a session. The refresh token is set as an httpOnly cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerAuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/customer/google:
+    post:
+      tags:
+        - Customer auth
+      summary: Log in with Google
+      operationId: loginCustomerWithGoogle
+      description: Verifies a Google ID token, signs the customer up on the first login and starts a session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerAuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/customer/refresh:
+    post:
+      tags:
+        - Customer auth
+      summary: Refresh the customer session
+      operationId: refreshCustomerSession
+      description: Rotates the refresh cookie and returns a new access token. Reusing an old refresh token revokes the whole session family.
+      responses:
+        '200':
+          description: Session refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/customer/logout:
+    post:
+      tags:
+        - Customer auth
+      summary: Log out
+      operationId: logoutCustomer
+      description: Revokes the current session and clears the session cookies.
+      responses:
+        '204':
+          description: Logged out
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me:
+    get:
+      tags:
+        - Customer
+      summary: Get the logged-in customer
+      operationId: getCustomerProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      tags:
+        - Customer
+      summary: Update the customer profile
+      operationId: updateCustomerProfile
+      description: Updates the name and/or the contact phone. Send `phone` as null to remove it.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+      responses:
+        '200':
+          description: The updated customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/identities/google:
+    post:
+      tags:
+        - Customer
+      summary: Link a Google account
+      operationId: linkCustomerGoogleAccount
+      description: Links a Google account so the customer can log in with Google or SMS.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: The updated customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/addresses:
+    get:
+      tags:
+        - Customer
+      summary: List saved addresses
+      operationId: listCustomerAddresses
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Address'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Customer
+      summary: Save a new address
+      operationId: addCustomerAddress
+      description: The delivery zone is resolved from the neighborhood and city. At most 5 addresses per customer.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewAddressRequest'
+      responses:
+        '201':
+          description: The saved address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/addresses/{addressId}:
+    parameters:
+      - $ref: '#/components/parameters/AddressId'
+    put:
+      tags:
+        - Customer
+      summary: Replace an address
+      operationId: updateCustomerAddress
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      responses:
+        '200':
+          description: The updated address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Customer
+      summary: Remove an address
+      operationId: removeCustomerAddress
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Address removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/addresses/{addressId}/default:
+    parameters:
+      - $ref: '#/components/parameters/AddressId'
+    patch:
+      tags:
+        - Customer
+      summary: Set the default address
+      operationId: setCustomerDefaultAddress
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: All addresses with the new default
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Address'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AddressId:
+      name: addressId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the address
+
+  responses:
+    BadRequest:
+      description: Request does not match the contract
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    Unauthorized:
+      description: Missing, invalid or expired credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: The authenticated subject cannot access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflicts with the current state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: Breaks a business rule (see `code`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Throttled; retry after the `Retry-After` header
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
   schemas:
+    OtpRequest:
+      type: object
+      required:
+        - phone
+      properties:
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+          description: Brazilian mobile phone in any format
+          example: '(11) 99999-8888'
+    OtpRequestResponse:
+      type: object
+      required:
+        - phone
+        - expiresInSeconds
+        - retryAfterSeconds
+      properties:
+        phone:
+          type: string
+          description: Normalized E.164 phone
+          example: '+5511999998888'
+        expiresInSeconds:
+          type: integer
+          example: 300
+        retryAfterSeconds:
+          type: integer
+          example: 60
+        debugCode:
+          type: string
+          description: Simulated SMS code, only when the demo mode is on
+          example: '482913'
+    OtpVerifyRequest:
+      type: object
+      required:
+        - phone
+        - code
+      properties:
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+        code:
+          type: string
+          pattern: '^\d{6}$'
+    GoogleLoginRequest:
+      type: object
+      required:
+        - idToken
+      properties:
+        idToken:
+          type: string
+          minLength: 1
+          description: Google ID token (`credential` from Google Identity Services)
+    AccessTokenResponse:
+      type: object
+      required:
+        - accessToken
+        - accessTokenExpiresInSeconds
+      properties:
+        accessToken:
+          type: string
+        accessTokenExpiresInSeconds:
+          type: integer
+          example: 900
+    CustomerAuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/AccessTokenResponse'
+        - type: object
+          required:
+            - isNew
+            - customer
+          properties:
+            isNew:
+              type: boolean
+              description: True when this login created the account
+            customer:
+              $ref: '#/components/schemas/Customer'
+    Customer:
+      type: object
+      required:
+        - id
+        - isPhoneVerified
+        - isGoogleLinked
+        - addresses
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+          description: E.164 phone
+        isPhoneVerified:
+          type: boolean
+          description: True when the phone was verified by SMS (login identity)
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+        isGoogleLinked:
+          type: boolean
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        createdAt:
+          type: string
+          format: date-time
+    UpdateCustomerRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        phone:
+          type: string
+          nullable: true
+          minLength: 10
+          maxLength: 20
+          description: Contact phone; null removes it
+    AddressRequest:
+      type: object
+      required:
+        - label
+        - zipCode
+        - street
+        - number
+        - neighborhood
+        - city
+        - state
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 30
+          example: 'Casa'
+        zipCode:
+          type: string
+          pattern: '^\d{8}$'
+          example: '04101300'
+        street:
+          type: string
+          minLength: 1
+          maxLength: 120
+        number:
+          type: string
+          minLength: 1
+          maxLength: 10
+        complement:
+          type: string
+          maxLength: 60
+        neighborhood:
+          type: string
+          minLength: 1
+          maxLength: 80
+        city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        state:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          example: 'SP'
+        reference:
+          type: string
+          maxLength: 120
+    NewAddressRequest:
+      allOf:
+        - $ref: '#/components/schemas/AddressRequest'
+        - type: object
+          properties:
+            isDefault:
+              type: boolean
+    Address:
+      type: object
+      required:
+        - id
+        - label
+        - zipCode
+        - street
+        - number
+        - neighborhood
+        - city
+        - state
+        - isDefault
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        zipCode:
+          type: string
+        street:
+          type: string
+        number:
+          type: string
+        complement:
+          type: string
+        neighborhood:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        reference:
+          type: string
+        deliveryZoneId:
+          type: string
+          description: Present only when the address is served (CUS-R03)
+        isDefault:
+          type: boolean
     User:
       type: object
       properties:
@@ -284,6 +923,19 @@ components:
           type: string
           description: The API endpoint that generated the error
           example: '/users/123'
+        code:
+          type: string
+          description: Machine-readable reason from the business rules (e.g. ADDRESS_LIMIT_REACHED)
+          example: 'ADDRESS_LIMIT_REACHED'
+        details:
+          type: object
+          additionalProperties: true
+          description: Extra context for the error
+        errors:
+          type: array
+          description: Validator errors (when the request does not match the contract)
+          items:
+            type: object
     ValidationError:
       type: object
       required:

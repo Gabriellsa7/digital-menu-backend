@@ -60,7 +60,10 @@ describe('When we try to create a user with an email already in use', () => {
 
     const { body, statusCode } = await supertest(app.app)
       .post(`/users`)
-      .send({ ...paramsCreate, id: new mongoose.Types.ObjectId().toHexString() });
+      .send({
+        ...paramsCreate,
+        id: new mongoose.Types.ObjectId().toHexString(),
+      });
 
     expect(statusCode).toBe(409);
     expect(body).toMatchObject({
