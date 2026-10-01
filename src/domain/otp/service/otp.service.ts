@@ -1,3 +1,4 @@
+import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
 import { randomUUID } from 'crypto';
 import { Logger } from 'traceability';
 import { IClock } from '../../common/clock.interface';
@@ -46,13 +47,7 @@ export class OtpService implements IOtpService {
     this.exposeCode = exposeCode;
   }
 
-  /**
-   * Send a new login code by SMS (OTP-R01..R03, R06, R07)
-   * @param phone - The phone in any Brazilian format
-   * @returns When the code expires and when a new one can be requested
-   * @throws BusinessRuleError INVALID_PHONE when it is not a BR mobile
-   * @throws TooManyRequestsError when the phone is throttled
-   */
+  @ErrorHandler()
   async requestOtpCode(phone: string): Promise<IOtpCodeRequest> {
     const normalizedPhone = normalizeBrazilianMobile(phone);
     if (!normalizedPhone) {
@@ -91,13 +86,7 @@ export class OtpService implements IOtpService {
     };
   }
 
-  /**
-   * Check a login code and consume it (OTP-R04, R05)
-   * @param params - The phone and the code typed by the customer
-   * @returns The verified phone in E.164
-   * @throws UnauthorizedError OTP_INVALID when the code is wrong or expired
-   * @throws BusinessRuleError OTP_LOCKED after too many wrong attempts
-   */
+  @ErrorHandler()
   async verifyOtpCode({ phone, code }: IParamsVerifyOtpCode): Promise<string> {
     const normalizedPhone = normalizeBrazilianMobile(phone);
     const now = this.clock.now();
