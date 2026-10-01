@@ -1,8 +1,6 @@
 import { CookieOptions, Response } from 'express';
 
 export const CUSTOMER_REFRESH_COOKIE = 'dm_rt_customer';
-// Non-sensitive flag the Next.js proxy reads to redirect logged-out visitors
-// before rendering; the API still validates every request.
 export const CUSTOMER_SESSION_HINT_COOKIE = 'dm_customer_session';
 const REFRESH_COOKIE_PATH = '/auth/customer';
 

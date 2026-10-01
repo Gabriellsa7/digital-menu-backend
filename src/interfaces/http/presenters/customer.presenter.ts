@@ -3,10 +3,6 @@ import {
   ICustomer,
 } from '../../../domain/customer/interfaces/customer.interface';
 
-// Presenters shape domain objects into the contract responses. They keep
-// internal fields (googleSub, phoneVerifiedAt...) out of the API and drop
-// undefined keys, which the response validator would reject.
-
 export interface IAddressResponse {
   id: string;
   label: string;

@@ -42,7 +42,6 @@ export class CustomerController implements IController {
   }
 
   initRoutes() {
-    // Scoped to /me so the guard never runs for other controllers' routes
     this.router.use(
       '/me',
       authenticate(this.tokenService),
@@ -61,9 +60,6 @@ export class CustomerController implements IController {
     );
   }
 
-  /**
-   * Fetch the logged-in customer
-   */
   getProfile = async (
     req: Request,
     res: Response,
@@ -79,16 +75,13 @@ export class CustomerController implements IController {
     }
   };
 
-  /**
-   * Update the name and/or the contact phone (null removes it)
-   */
   updateProfile = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
-    const { name, phone } = req.body;
     try {
+      const { name, phone } = req.body;
       const customer = await this.customerService.updateCustomerProfile({
         customerId: this.customerId(req),
         name,
@@ -100,9 +93,6 @@ export class CustomerController implements IController {
     }
   };
 
-  /**
-   * Link a Google account to the logged-in customer
-   */
   linkGoogleAccount = async (
     req: Request,
     res: Response,
@@ -119,9 +109,6 @@ export class CustomerController implements IController {
     }
   };
 
-  /**
-   * List the saved addresses
-   */
   listAddresses = async (
     req: Request,
     res: Response,
@@ -137,9 +124,6 @@ export class CustomerController implements IController {
     }
   };
 
-  /**
-   * Save a new address
-   */
   addAddress = async (
     req: Request,
     res: Response,
@@ -159,9 +143,6 @@ export class CustomerController implements IController {
     }
   };
 
-  /**
-   * Replace an address
-   */
   updateAddress = async (
     req: Request<TAddressParams>,
     res: Response,
@@ -179,9 +160,6 @@ export class CustomerController implements IController {
     }
   };
 
-  /**
-   * Remove an address
-   */
   removeAddress = async (
     req: Request<TAddressParams>,
     res: Response,
@@ -198,9 +176,6 @@ export class CustomerController implements IController {
     }
   };
 
-  /**
-   * Make an address the default one
-   */
   setDefaultAddress = async (
     req: Request<TAddressParams>,
     res: Response,
@@ -217,14 +192,10 @@ export class CustomerController implements IController {
     }
   };
 
-  /**
-   * Get the router with all routes
-   */
   public getRoutes(): Router {
     return this.router;
   }
 
-  // Safe after authenticate + authorize ran for every /me route
   private customerId(req: Request<TAddressParams> | Request): string {
     return req.auth!.subjectId;
   }

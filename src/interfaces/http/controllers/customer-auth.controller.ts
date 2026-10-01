@@ -1,6 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { IController } from './controller.interface';
-import { ICustomerAuthService } from '../../../domain/auth/interfaces/customer-auth.service.interface';
+import {
+  ICustomerAuthResult,
+  ICustomerAuthService,
+} from '../../../domain/auth/interfaces/customer-auth.service.interface';
 import { UnauthorizedError } from '../../../domain/errors/unauthorized.error';
 import {
   CUSTOMER_REFRESH_COOKIE,
@@ -38,9 +41,6 @@ export class CustomerAuthController implements IController {
     this.router.post('/auth/customer/logout', this.logout);
   }
 
-  /**
-   * Send a login code by SMS (simulated)
-   */
   requestOtpCode = async (
     req: Request,
     res: Response,
@@ -56,16 +56,13 @@ export class CustomerAuthController implements IController {
     }
   };
 
-  /**
-   * Log in (or sign up) with the SMS code
-   */
   loginWithOtp = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
-    const { phone, code } = req.body;
     try {
+      const { phone, code } = req.body;
       const result = await this.customerAuthService.loginWithOtp({
         phone,
         code,
@@ -77,9 +74,6 @@ export class CustomerAuthController implements IController {
     }
   };
 
-  /**
-   * Log in (or sign up) with a Google ID token
-   */
   loginWithGoogle = async (
     req: Request,
     res: Response,
@@ -96,20 +90,18 @@ export class CustomerAuthController implements IController {
     }
   };
 
-  /**
-   * Rotate the refresh cookie and return a new access token
-   */
   refreshSession = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
-    const refreshToken: string | undefined =
-      req.cookies?.[CUSTOMER_REFRESH_COOKIE];
     try {
+      const refreshToken: string | undefined =
+        req.cookies?.[CUSTOMER_REFRESH_COOKIE];
       if (!refreshToken) {
         throw new UnauthorizedError('Missing session', 'SESSION_MISSING');
       }
+
       const tokens = await this.customerAuthService.refreshSession({
         refreshToken,
         userAgent: req.get('user-agent'),
@@ -132,9 +124,6 @@ export class CustomerAuthController implements IController {
     }
   };
 
-  /**
-   * Revoke the current session and clear the cookies
-   */
   logout = async (
     req: Request,
     res: Response,
@@ -151,20 +140,13 @@ export class CustomerAuthController implements IController {
     }
   };
 
-  /**
-   * Get the router with all routes
-   */
   public getRoutes(): Router {
     return this.router;
   }
 
   private sendAuthResponse(
     res: Response,
-    {
-      customer,
-      isNew,
-      tokens,
-    }: Awaited<ReturnType<ICustomerAuthService['loginWithOtp']>>,
+    { customer, isNew, tokens }: ICustomerAuthResult,
   ): void {
     setCustomerSessionCookies(
       res,

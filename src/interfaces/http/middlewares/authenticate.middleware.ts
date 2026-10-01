@@ -5,10 +5,6 @@ import { UnauthorizedError } from '../../../domain/errors/unauthorized.error';
 
 const BEARER_PREFIX = 'Bearer ';
 
-/**
- * Verifies the `Authorization: Bearer <access token>` header and exposes the
- * subject as `req.auth`. Use it together with `authorize`.
- */
 export function authenticate(tokenService: ITokenService): RequestHandler {
   return (req, _res, next) => {
     const header = req.headers.authorization;

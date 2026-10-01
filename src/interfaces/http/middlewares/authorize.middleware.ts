@@ -7,14 +7,9 @@ import { UnauthorizedError } from '../../../domain/errors/unauthorized.error';
 
 export interface IParamsAuthorize {
   subjectType: ESubjectType;
-  /** Staff only: roles allowed; omit to allow any role */
   roles?: EStaffRole[];
 }
 
-/**
- * Restricts a route to a subject type (and optionally to staff roles).
- * Must run after `authenticate`.
- */
 export function authorize({
   subjectType,
   roles,
