@@ -4,10 +4,6 @@ import { IAddress, ICustomer } from './interfaces/customer.interface';
 
 export const MAX_ADDRESSES_PER_CUSTOMER = 5;
 
-/**
- * Address rules live here (CUS-R02): every method returns a new address list
- * and never mutates the entity, so the service decides what to persist.
- */
 export class Customer implements ICustomer {
   public readonly id: string;
   public readonly name?: string;
@@ -35,9 +31,6 @@ export class Customer implements ICustomer {
     this.updatedAt = props.updatedAt;
   }
 
-  /**
-   * @throws NotFoundError when the address does not belong to the customer
-   */
   findAddress(addressId: string): IAddress {
     const address = this.addresses.find(({ id }) => id === addressId);
     if (!address) {
@@ -46,10 +39,6 @@ export class Customer implements ICustomer {
     return address;
   }
 
-  /**
-   * The first address is always the default; a new default unsets the others.
-   * @throws BusinessRuleError ADDRESS_LIMIT_REACHED when the limit is reached
-   */
   withAddressAdded(address: IAddress): IAddress[] {
     if (this.addresses.length >= MAX_ADDRESSES_PER_CUSTOMER) {
       throw new BusinessRuleError(
@@ -64,7 +53,6 @@ export class Customer implements ICustomer {
     return [...others, { ...address, isDefault }];
   }
 
-  /** Keeps the id and the default flag of the replaced address */
   withAddressReplaced(
     addressId: string,
     data: Omit<IAddress, 'id' | 'isDefault'>,
@@ -77,7 +65,6 @@ export class Customer implements ICustomer {
     );
   }
 
-  /** Removing the default address promotes the first remaining one */
   withAddressRemoved(addressId: string): IAddress[] {
     const removed = this.findAddress(addressId);
     const remaining = this.addresses.filter(({ id }) => id !== addressId);
@@ -98,7 +85,6 @@ export class Customer implements ICustomer {
     }));
   }
 
-  /** Fields required before placing an order (CUS-R04) */
   missingOrderFields(): string[] {
     const missing: string[] = [];
     if (!this.name) {

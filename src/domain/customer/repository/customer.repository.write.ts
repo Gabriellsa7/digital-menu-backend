@@ -10,7 +10,6 @@ export type TOptionalCustomerField =
 
 export interface IParamsUpdateCustomerFields {
   set?: Partial<Omit<ICustomer, 'id' | 'createdAt' | 'updatedAt'>>;
-  /** Optional fields to remove from the document ($unset, never null) */
   unset?: TOptionalCustomerField[];
 }
 

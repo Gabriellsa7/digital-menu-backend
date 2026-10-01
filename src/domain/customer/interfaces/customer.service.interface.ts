@@ -24,7 +24,6 @@ export interface IParamsUpdateAddress {
 export interface IParamsUpdateCustomerProfile {
   customerId: string;
   name?: string;
-  /** undefined = keep, null = remove, string = replace (contact phone) */
   phone?: string | null;
 }
 
