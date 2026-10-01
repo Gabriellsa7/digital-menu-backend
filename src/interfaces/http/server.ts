@@ -11,8 +11,10 @@ import { IController } from './controllers/controller.interface';
 import mongoose from 'mongoose';
 import * as OpenApiValidator from 'express-openapi-validator';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { HttpError } from 'express-openapi-validator/dist/framework/types';
 import { DomainError } from '../../domain/errors/domain.error';
+import { TooManyRequestsError } from '../../domain/errors/too-many-requests.error';
 
 export class Server {
   public app: Application;
@@ -28,6 +30,7 @@ export class Server {
   private readonly defaultMiddlewares = [
     express.json({ limit: '3mb' }),
     express.urlencoded({ limit: '3mb', extended: true }),
+    cookieParser(),
     ContextAsyncHooks.getExpressMiddlewareTracking(),
     helmet(),
   ];
@@ -70,17 +73,18 @@ export class Server {
     );
   }
 
-  /**
-   * Central error handler: the only place that translates errors into HTTP
-   * responses, always matching the Error/ValidationError contract schemas.
-   */
   private errorHandler() {
     this.app.use(
       (err: Error, req: Request, res: Response, _next: NextFunction) => {
         if (err instanceof DomainError) {
+          if (err instanceof TooManyRequestsError) {
+            res.setHeader('Retry-After', String(err.retryAfterSeconds));
+          }
           res.status(err.status).json({
             message: err.message,
             status: err.status,
+            ...(err.code && { code: err.code }),
+            ...(err.details && { details: err.details }),
           });
           return;
         }

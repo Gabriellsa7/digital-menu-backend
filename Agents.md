@@ -46,16 +46,16 @@ implementation** of this standard — every stub below mirrors its real code.
 ### 2.1 Files
 
 Lowercase with dots as the type separator — `<feature>.<type>[.<variant>].ts`:
-`user.service.ts`, `user.repository.read.ts`, `user.controller.factory.ts`,
+`customer.service.ts`, `customer.repository.read.ts`, `customer.controller.factory.ts`,
 `controller.interface.ts`, `not-found.error.ts`. **No exceptions.**
 
 ### 2.2 Interfaces & Enums
 
 | Type | Prefix | Casing | Example |
 | --- | --- | --- | --- |
-| **Domain interface** | `I` | Pascal | `IUser`, `IUserService`, `IPagination` |
-| **Parameter object** | `IParams` | Pascal | `IParamsCreateUser`, `IParamsUserService` |
-| **Persistence interface** (Mongo) | `IM` | Pascal | `IMUser extends IUser` |
+| **Domain interface** | `I` | Pascal | `ICustomer`, `ICustomerService`, `IPagination` |
+| **Parameter object** | `IParams` | Pascal | `IParamsAddAddress`, `IParamsCustomerService` |
+| **Persistence interface** (Mongo) | `IM` | Pascal | `IMCustomer extends ICustomer` |
 | **Enum** | `E` | Pascal | `EStatus` with members `ACTIVE`, `PENDING` |
 
 Other rules:
@@ -72,15 +72,15 @@ the domain interface and lives **in the schema file** (not the model file) to
 keep the schema → model import direction free of cycles:
 
 ```ts
-// src/infrastructure/db/mongo/schema/user.schema.ts
+// src/infrastructure/db/mongo/schema/customer.schema.ts
 import mongoose, { Types } from 'mongoose';
-import { IUser } from '../../../../domain/user/interfaces/user.interface';
+import { ICustomer } from '../../../../domain/customer/interfaces/customer.interface';
 
-export interface IMUser extends IUser {
+export interface IMCustomer extends ICustomer {
   _id: Types.ObjectId;
 }
 
-export const userSchema = new mongoose.Schema<IMUser>({
+export const customerSchema = new mongoose.Schema<IMCustomer>({
   id: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -89,15 +89,15 @@ export const userSchema = new mongoose.Schema<IMUser>({
 ```
 
 ```ts
-// src/infrastructure/db/mongo/models/user.model.ts
+// src/infrastructure/db/mongo/models/customer.model.ts
 import mongoose from 'mongoose';
-import { IMUser, userSchema } from '../schema/user.schema';
+import { IMCustomer, customerSchema } from '../schema/customer.schema';
 
-export const Muser = mongoose.model<IMUser>('user', userSchema);
+export const Mcustomer = mongoose.model<IMCustomer>('customer', customerSchema);
 ```
 
-Models are prefixed with `M` (`Muser`). Repositories return plain domain
-objects: reads use `.lean<IUser>()` with a projection that hides `_id`/`__v`.
+Models are prefixed with `M` (`Mcustomer`). Repositories return plain domain
+objects: reads use `.lean<ICustomer>()` with a projection that hides `_id`/`__v`.
 
 ---
 
@@ -106,8 +106,8 @@ objects: reads use `.lean<IUser>()` with a projection that hides `_id`/`__v`.
 ### 3.1 Domain (Interfaces & Repository Contracts)
 
 ```ts
-// src/domain/user/interfaces/user.interface.ts
-export interface IUser {
+// src/domain/customer/interfaces/customer.interface.ts
+export interface ICustomer {
   id: string; // exposed id (string — not the Mongo ObjectId)
   name: string;
   email: string;
@@ -116,15 +116,15 @@ export interface IUser {
 ```
 
 ```ts
-// src/domain/user/repository/user.repository.read.ts
-export interface IUserRepositoryRead {
-  findUserByEmail(email: string): Promise<IUser | null>;
-  findUserById(id: string): Promise<IUser | null>;
-  listUsers(filter: Partial<IUser>, pagination: IPagination): Promise<IUser[]>;
+// src/domain/customer/repository/customer.repository.read.ts
+export interface ICustomerRepositoryRead {
+  findCustomerById(id: string): Promise<ICustomer | null>;
+  findCustomerByVerifiedPhone(phone: string): Promise<ICustomer | null>;
+  findCustomerByGoogleSub(googleSub: string): Promise<ICustomer | null>;
 }
 ```
 
-Write contracts live in `user.repository.write.ts` (`IUserRepositoryWrite`).
+Write contracts live in `customer.repository.write.ts` (`ICustomerRepositoryWrite`).
 The read/write split keeps queries and mutations separately swappable.
 
 ### 3.2 Domain Errors
@@ -149,17 +149,19 @@ HTTP responses in the contract shape (`{ message, status }`).
 ### 3.3 Service (business rules)
 
 ```ts
-// src/domain/user/service/user.service.ts
-export class UserService implements IUserService {
-  constructor({ userRepositoryRead, userRepositoryWrite }: IParamsUserService) { ... }
+// src/domain/customer/service/customer.service.ts
+export class CustomerService implements ICustomerService {
+  constructor({ customerRepositoryRead, customerRepositoryWrite }: IParamsCustomerService) { ... }
 
-  async createUser(params: IParamsCreateUser): Promise<IUser> {
-    const existingUser = await this.userRepositoryRead.findUserByEmail(params.email);
-    if (existingUser) {
-      throw new ConflictError('A user with this email already exists');
-    }
-    const user = new User(params.id, params.name, params.email, params.createdAt);
-    return this.userRepositoryWrite.createUser(user);
+  @ErrorHandler()
+  async getCustomerById(id: string): Promise<ICustomer> {
+    const customer = await this.customerRepositoryRead.findCustomerById(id);
+
+    return customer ? customer : this.throwCustomerNotFound();
+  }
+
+  private throwCustomerNotFound(): never {
+    throw new NotFoundError('Customer not found');
   }
 }
 ```
@@ -169,16 +171,16 @@ Never re-wrap errors in `new Error(string)` — that loses the type and stack.
 ### 3.4 Controller (thin adapter)
 
 ```ts
-// src/interfaces/http/controllers/user.controller.ts
-export class UserController implements IController {
-  constructor(private readonly userService: IUserService) { ... } // interface, not class
+// src/interfaces/http/controllers/customer.controller.ts
+export class CustomerController implements IController {
+  constructor({ customerService, customerAuthService, tokenService }: IParamsCustomerController) { ... }
 
-  createUser = async (req: Request, res: Response, next: NextFunction) => {
+  getProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const newUser = await this.userService.createUser({ ...req.body });
-      res.status(201).json(newUser);
+      const customer = await this.customerService.getCustomerById(req.auth!.subjectId);
+      res.status(200).json(toCustomerResponse(customer));
     } catch (error) {
-      next(error); // central error handler answers in contract shape
+      next(error);
     }
   };
 }
@@ -190,16 +192,16 @@ export class UserController implements IController {
 
 | Artifact | Path & Naming | Example |
 | --- | --- | --- |
-| **Controller factory** | `src/infrastructure/config/factories/<feature>.controller.factory.ts` | `UserControllerFactory` |
-| **Service factory** | `src/infrastructure/config/factories/<feature>.service.factory.ts` | `UserServiceFactory` |
+| **Controller factory** | `src/infrastructure/config/factories/<feature>.controller.factory.ts` | `CustomerControllerFactory` |
+| **Service factory** | `src/infrastructure/config/factories/<feature>.service.factory.ts` | `CustomerServiceFactory` |
 | **Worker factory** *(when needed)* | `src/infrastructure/config/factories/messaging/<event>.worker.factory.ts` | `ConsumerWorkerFactory` |
 
 ```ts
-export class UserServiceFactory {
+export class CustomerServiceFactory {
   static create() {
-    return new UserService({
-      userRepositoryRead: new UserRepositoryRead(),
-      userRepositoryWrite: new UserRepositoryWrite(),
+    return new CustomerService({
+      customerRepositoryRead: new CustomerRepositoryRead(),
+      customerRepositoryWrite: new CustomerRepositoryWrite(),
     });
   }
 }
@@ -220,7 +222,7 @@ import { env } from './infrastructure/config/env'; // fail-fast validation
 
 const app = new Server({
   port: env.port,
-  controllers: [UserControllerFactory.create()],
+  controllers: [CustomerControllerFactory.create()],
   databaseURI: env.databaseUri,
   apiSpecLocation: OPEN_API_SPEC_FILE_LOCATION,
 });
@@ -246,7 +248,7 @@ Bootstrap-phase I/O happens **inside** `start()`, never at module load.
 
 * **Never `console.log`** — always `import { Logger } from 'traceability'`.
 * Every log carries structured metadata:
-  `Logger.info('User created', { eventName: 'user.created', userId })`.
+  `Logger.info('Customer created', { eventName: 'customer.created', userId })`.
   Never `JSON.stringify` inside the message.
 * OpenTelemetry (`src/infrastructure/telemetry/`) auto-instruments Express,
   Mongoose and HTTP. Every log emitted inside a span automatically gains
@@ -269,8 +271,8 @@ Bootstrap-phase I/O happens **inside** `start()`, never at module load.
 
 | Test type | Suffix | Example |
 | --- | --- | --- |
-| **Unit** | `.unit.test.ts` | `user.service.unit.test.ts` |
-| **Integration** | `.int.test.ts` | `user.create.int.test.ts` |
+| **Unit** | `.unit.test.ts` | `customer.service.unit.test.ts` |
+| **Integration** | `.int.test.ts` | `customer.addresses.int.test.ts` |
 
 1. Filenames start with the subject under test; never generic names.
 2. Do not mix unit and integration specs in one file.
@@ -322,14 +324,14 @@ When generating or editing code, **always**:
 
 ### 8.3 Repository layer
 * Thin CRUD wrappers; no domain logic, no try/catch re-wrapping.
-* Return plain domain objects (`.lean<IUser>()` + projection hiding `_id`/`__v`).
+* Return plain domain objects (`.lean<ICustomer>()` + projection hiding `_id`/`__v`).
 
 ### 8.4 Route naming
-* Resources in **kebab-case**, plural, no `/api` prefix: `/users`,
-  `/user-profiles`. List endpoints take `limit`/`offset` query params.
+* Resources in **kebab-case**, plural, no `/api` prefix: `/me/addresses`,
+  `/delivery-zones`. List endpoints take `limit`/`offset` query params.
 
 ### 8.5 Descriptive naming
-* Prefer intent-revealing identifiers (`findUserByEmail`), never generic ones.
+* Prefer intent-revealing identifiers (`findCustomerByGoogleSub`), never generic ones.
 
 ---
 

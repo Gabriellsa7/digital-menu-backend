@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "main": "dist/src/main.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "ts-node-dev --env-file=.env src/main.ts",
@@ -32,9 +32,11 @@
     "@semantic-release/exec": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/release-notes-generator": "^14.0.1",
+    "@types/cookie-parser": "^1.4.10",
     "@types/jest": "^29.5.14",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/mongodb-memory-server": "^2.3.0",
-    "@types/node": "^22.10.1",
+    "@types/node": "^24",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.16.0",
     "eslint-config-prettier": "^10.0.1",
@@ -63,10 +65,13 @@
     "@opentelemetry/resources": "^2.9.0",
     "@opentelemetry/sdk-node": "^0.220.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
     "express": "^4.19.2",
     "express-openapi-validator": "^4.13.8",
+    "google-auth-library": "^11.1.0",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.8.3",
     "traceability": "^3.2.2"
   }

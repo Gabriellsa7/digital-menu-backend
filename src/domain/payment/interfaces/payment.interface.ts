@@ -31,7 +31,6 @@ export interface IPayment {
   changeForInCents?: number;
   pix?: IPixCharge;
   card?: ICardInfo;
-  /** Declined online card attempts; the order is canceled after 3 (PAY-R05) */
   failedAttempts: number;
   transactionId?: string;
   paidAt?: Date;

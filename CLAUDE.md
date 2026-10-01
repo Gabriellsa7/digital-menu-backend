@@ -5,7 +5,7 @@ precedence over any document** (including `Agents.md` — see "Known divergences
 
 ## What this is
 
-A REST API boilerplate in Node.js 20 + TypeScript (strict, CommonJS) with Clean
+A REST API boilerplate in Node.js 24 + TypeScript (strict, CommonJS) with Clean
 Architecture, contract-first design (OpenAPI validates requests **and** responses
 at runtime), MongoDB via Mongoose, and observability with OpenTelemetry plus
 structured logs (winston via the `traceability` lib) carrying the `trace_id` on
@@ -35,7 +35,8 @@ yarn prettier && yarn lint && yarn build && yarn test
 | Path | Responsibility |
 | --- | --- |
 | `src/domain/<feature>/` | Pure business logic (no I/O): entity, interfaces, repository contracts, service |
-| `src/domain/errors/` | Domain errors (`DomainError`, `NotFoundError` 404, `ConflictError` 409) — mapped to HTTP by the central error handler in `server.ts` |
+| `src/domain/errors/` | Domain errors (`DomainError`, `UnauthorizedError` 401, `ForbiddenError` 403, `NotFoundError` 404, `ConflictError` 409, `BusinessRuleError` 422 with `code`, `TooManyRequestsError` 429) — mapped to HTTP by the central error handler in `server.ts` |
+| `src/domain/common/decorators/` | `@ErrorHandler()` for every public service method |
 | `src/domain/common/` | Cross-feature domain types (e.g. `IPagination`) |
 | `src/interfaces/http/` | `server.ts` (Express + middlewares) and `controllers/` (thin HTTP adapters) |
 | `src/infrastructure/repository/<feature>/` | Repository contract implementations (Mongoose) |
@@ -50,7 +51,7 @@ yarn prettier && yarn lint && yarn build && yarn test
 `interfaces`. Controllers delegate to services; services receive repositories via
 constructor (an `IParams*` object); composition happens **only** in factories.
 
-## Adding a feature (exact order — mirror the `user` slice)
+## Adding a feature (exact order — mirror the `customer` slice)
 
 1. `src/domain/<feature>/interfaces/<feature>.interface.ts` — `I<Feature>`
 2. `src/domain/<feature>/interfaces/<feature>.service.interface.ts` — `I<Feature>Service`, `IParamsCreate<Feature>`, `IParams<Feature>Service`…
@@ -58,7 +59,7 @@ constructor (an `IParams*` object); composition happens **only** in factories.
 4. `src/domain/<feature>/<feature>.entity.ts` — class `<Feature> implements I<Feature>` with `readonly` properties
 5. `src/domain/<feature>/service/<feature>.service.ts` — `<Feature>Service implements I<Feature>Service`; business rules throw errors from `src/domain/errors/` (`NotFoundError`, `ConflictError`) — never decide HTTP status in the service
 6. `src/infrastructure/db/mongo/schema/<feature>.schema.ts` — `IM<Feature> extends I<Feature>` (adds `_id: Types.ObjectId`) and `export const <feature>Schema = new Schema<IM<Feature>>(...)`
-7. `src/infrastructure/db/mongo/models/<feature>.model.ts` — `export const M<feature> = mongoose.model<IM<Feature>>(...)` (e.g. `Muser`)
+7. `src/infrastructure/db/mongo/models/<feature>.model.ts` — `export const M<feature> = mongoose.model<IM<Feature>>(...)` (e.g. `Mcustomer`)
 8. `src/infrastructure/repository/<feature>/<feature>.repository.read.ts` and `.write.ts` — implementations (same file names as the contracts, different directories); use `.lean()` with `HIDE_MONGO_INTERNAL_FIELDS` so `_id`/`__v` never leak
 9. `src/interfaces/http/controllers/<feature>.controller.ts` — `<Feature>Controller implements IController`, receives `I<Feature>Service` (the interface, not the class); errors go to `next(error)` — the central error handler answers in the contract shape
 10. `src/infrastructure/config/factories/<feature>.service.factory.ts` and `<feature>.controller.factory.ts` — `static create()`
@@ -70,19 +71,21 @@ Details in [docs/architecture.md](docs/architecture.md).
 
 ## Critical conventions (summary)
 
-- Files: lowercase with dots — `user.service.ts`, `user.repository.read.ts`, `user.controller.factory.ts`, `controller.interface.ts`. No exceptions.
-- Interfaces prefixed with `I` (`IUser`, `IUserService`, `IController`); constructor/method parameter objects as `IParams*` (`IParamsCreateUser`, `IParamsUserService`); persistence interfaces as `IM*` (`IMUser extends IUser`, defined next to the schema).
-- Mongoose models prefixed with `M` and typed (`Muser = mongoose.model<IMUser>`); schemas in camelCase and typed (`userSchema = new Schema<IMUser>`).
+- Files: lowercase with dots — `customer.service.ts`, `customer.repository.read.ts`, `customer.controller.factory.ts`, `controller.interface.ts`. No exceptions.
+- Interfaces prefixed with `I` (`ICustomer`, `ICustomerService`, `IController`); constructor/method parameter objects as `IParams*` (`IParamsAddAddress`, `IParamsCustomerService`); persistence interfaces as `IM*` (`IMCustomer extends ICustomer`, defined next to the schema).
+- Mongoose models prefixed with `M` and typed (`Mcustomer = mongoose.model<IMCustomer>`); schemas in camelCase and typed (`customerSchema = new Schema<IMCustomer>`).
 - Constants in `UPPER_SNAKE_CASE` (`OPEN_API_SPEC_FILE_LOCATION`).
 - Tests: `describe('When we ...')` / `it('should ...')`.
 - Commits: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`) — required by semantic-release and enforced by commitlint.
-- **Everything in English**: code, variable names, comments, tests, and documentation.
+- **Everything in English**: code, variable names, tests, and documentation.
+- **No comments in the code** (only functional directives such as `eslint-disable`).
+- Services: every public method has `@ErrorHandler()` and no `try/catch`; not-found lookups use `return entity ? entity : this.throw<Entity>NotFound();`. Controllers keep `try/catch` + `next(error)`.
 - Full table in [docs/conventions.md](docs/conventions.md).
 
 ## Observability (hard rules)
 
 - **Never** use `console.log`. Always `import { Logger } from 'traceability'`.
-- Every log with structured metadata: `Logger.info('message', { eventName: 'user.created', ... })`. **Never** `JSON.stringify` inside the message.
+- Every log with structured metadata: `Logger.info('message', { eventName: 'customer.created', ... })`. **Never** `JSON.stringify` inside the message.
 - The `import './infrastructure/telemetry/tracing'` **must be the first line** of `src/main.ts` — auto-instrumentation needs to load before express/mongoose.
 - Every log line emitted inside a request/span automatically gains `trace_id`, `span_id` and `trace_flags` (winston format in `src/infrastructure/telemetry/logger.ts`), in addition to the legacy `cid` from `traceability`.
 - Tests run with `OTEL_SDK_DISABLED=true` (set in `.env.test`).
@@ -123,7 +126,7 @@ factories with `static create()`, thin controllers with no business rules,
 typed domain errors with a central handler, contract-first validation,
 Conventional Commits, branches `feature/*`, `bugfix/*`, `hotfix/*`,
 `release/*`, coverage ≥ 80% (merged), logs with root-level `eventName`
-metadata, and comments only when they explain the "why".
+metadata, and no comments in the code.
 
 ## Detailed documentation
 

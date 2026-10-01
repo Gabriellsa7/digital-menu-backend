@@ -57,7 +57,7 @@ absent — the format is a no-op without a valid span.
 2. Short human message + structured metadata with an `eventName` in the
    `<context>.<event>` pattern:
    ```ts
-   Logger.info('User created', { eventName: 'user.created', userId: user.id });
+   Logger.info('Customer created', { eventName: 'customer.created', customerId: customer.id });
    Logger.error(err.message, { eventName: 'server.error', stack: err.stack });
    ```
 3. **Never `JSON.stringify` inside the message** — fields must be searchable
@@ -75,10 +75,10 @@ For relevant business operations, create manual spans in the service:
 ```ts
 import { trace } from '@opentelemetry/api';
 
-const tracer = trace.getTracer('user-service');
+const tracer = trace.getTracer('customer-service');
 
-async createUser(params: IParamsCreateUser): Promise<IUser> {
-  return tracer.startActiveSpan('UserService.createUser', async (span) => {
+async addAddress(params: IParamsAddAddress): Promise<IAddress> {
+  return tracer.startActiveSpan('CustomerService.addAddress', async (span) => {
     try {
       // ... existing logic ...
       return result;
@@ -110,7 +110,7 @@ automatically.
    docker run --rm -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one:latest
    ```
 2. `cp .env.example .env` (adjust `DATABASE_URI` if needed) and `yarn dev`.
-3. Make a request (`curl http://localhost:3000/users`) and check:
+3. Make a request (`curl -X POST http://localhost:3000/auth/customer/otp/request -H 'Content-Type: application/json' -d '{"phone":"11999998888"}'`) and check:
    - the JSON log on stdout contains `trace_id`/`span_id`;
    - the trace shows up at `http://localhost:16686` with the same `trace_id`.
 

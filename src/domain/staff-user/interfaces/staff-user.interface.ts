@@ -14,8 +14,6 @@ export interface IStaffUser {
   updatedAt: Date;
 }
 
-// Kept apart from IStaffUser so the hash is only loaded by the login flow
-// and can never leak through a regular read or API response.
 export interface IStaffUserWithPassword extends IStaffUser {
   passwordHash: string;
 }

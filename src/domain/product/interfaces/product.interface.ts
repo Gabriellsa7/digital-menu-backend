@@ -6,7 +6,6 @@ export interface IProduct {
   priceInCents: number;
   imageUrl?: string;
   imagePublicId?: string;
-  /** Display order of the add-on groups in the product modal */
   optionGroupIds: string[];
   isAvailable: boolean;
   isActive: boolean;

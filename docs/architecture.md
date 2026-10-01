@@ -2,24 +2,24 @@
 
 ## Overview
 
-Clean Architecture with vertical slices per feature. The `user` slice is the
+Clean Architecture with vertical slices per feature. The `customer` slice is the
 canonical example — every new feature must mirror it file by file.
 
 ```mermaid
 graph TD
-    A[main.ts<br/>composition root] --> B[infrastructure/config/factories<br/>UserControllerFactory / UserServiceFactory]
-    B --> C[interfaces/http/controllers<br/>UserController]
-    C --> D[domain/user/service<br/>UserService]
-    D --> E[domain/user/repository<br/>IUserRepositoryRead / IUserRepositoryWrite]
-    E -.implemented by.-> F[infrastructure/repository/user<br/>UserRepositoryRead / UserRepositoryWrite]
-    F --> G[infrastructure/db/mongo<br/>userSchema / Muser]
+    A[main.ts<br/>composition root] --> B[infrastructure/config/factories<br/>CustomerControllerFactory / CustomerServiceFactory]
+    B --> C[interfaces/http/controllers<br/>CustomerController]
+    C --> D[domain/customer/service<br/>CustomerService]
+    D --> E[domain/customer/repository<br/>ICustomerRepositoryRead / ICustomerRepositoryWrite]
+    E -.implemented by.-> F[infrastructure/repository/customer<br/>CustomerRepositoryRead / CustomerRepositoryWrite]
+    F --> G[infrastructure/db/mongo<br/>customerSchema / Mcustomer]
 ```
 
 **Dependency rule:** `domain/` is pure — it does not import `infrastructure/`
 or `interfaces/`. Repository contracts live in the domain
-(`src/domain/user/repository/user.repository.read.ts` → `IUserRepositoryRead`);
+(`src/domain/customer/repository/customer.repository.read.ts` → `ICustomerRepositoryRead`);
 implementations live in infrastructure
-(`src/infrastructure/repository/user/user.repository.read.ts` → `UserRepositoryRead`).
+(`src/infrastructure/repository/customer/customer.repository.read.ts` → `CustomerRepositoryRead`).
 The **file names are identical** on both sides — the directory distinguishes
 contract from implementation. Do not mix them up when editing.
 
@@ -27,19 +27,19 @@ contract from implementation. Do not mix them up when editing.
 
 Each feature has two repository contracts:
 
-- `I<Feature>RepositoryRead` — `findUserById`, `findUserByEmail`, `listUsers`
-- `I<Feature>RepositoryWrite` — `createUser`, `updateUserById`, `deleteUserById`
+- `I<Feature>RepositoryRead` — `findCustomerById`, `findCustomerByVerifiedPhone`, `findCustomerByGoogleSub`
+- `I<Feature>RepositoryWrite` — `createCustomer`, `updateCustomerById`
 
 The service receives both via a parameter object:
 
 ```ts
-export class UserService implements IUserService {
-  private userRepositoryRead: IUserRepositoryRead;
-  private userRepositoryWrite: IUserRepositoryWrite;
+export class CustomerService implements ICustomerService {
+  private customerRepositoryRead: ICustomerRepositoryRead;
+  private customerRepositoryWrite: ICustomerRepositoryWrite;
 
-  constructor({ userRepositoryRead, userRepositoryWrite }: IParamsUserService) {
-    this.userRepositoryRead = userRepositoryRead;
-    this.userRepositoryWrite = userRepositoryWrite;
+  constructor({ customerRepositoryRead, customerRepositoryWrite }: IParamsCustomerService) {
+    this.customerRepositoryRead = customerRepositoryRead;
+    this.customerRepositoryWrite = customerRepositoryWrite;
   }
 }
 ```
@@ -50,20 +50,20 @@ Manual DI, no container. Static factories in
 `src/infrastructure/config/factories/`, one per artifact, with a `static create()`:
 
 ```ts
-// user.service.factory.ts
-export class UserServiceFactory {
+// customer.service.factory.ts
+export class CustomerServiceFactory {
   static create() {
-    return new UserService({
-      userRepositoryRead: new UserRepositoryRead(),
-      userRepositoryWrite: new UserRepositoryWrite(),
+    return new CustomerService({
+      customerRepositoryRead: new CustomerRepositoryRead(),
+      customerRepositoryWrite: new CustomerRepositoryWrite(),
     });
   }
 }
 
-// user.controller.factory.ts
-export class UserControllerFactory {
+// customer.controller.factory.ts
+export class CustomerControllerFactory {
   static create(): IController {
-    return new UserController(UserServiceFactory.create());
+    return new CustomerController(CustomerServiceFactory.create());
   }
 }
 ```
@@ -103,19 +103,16 @@ service throws a typed error → controller passes it on with `next(error)` →
 central error handler responds in the contract shape. No other layer builds
 error responses.
 
-## Request→response flow (example: `POST /users`)
+## Request→response flow (example: `POST /me/addresses`)
 
-1. `express.json` parses the body; `ContextAsyncHooks` creates the tracking context (cid); OTel auto-instrumentation opens the HTTP span.
-2. `OpenApiValidator` validates the request against `src/contracts/service.yaml` — an invalid body → 400 `ValidationError` before reaching the controller.
-3. `UserController.createUser` (arrow function property) extracts `{ id, name, email, createdAt }` from the body and calls `userService.createUser(...)`.
-4. `UserService.createUser` applies the business rule: email already in use → throws `ConflictError` (becomes 409 in the handler); otherwise builds the `User` entity and delegates to `userRepositoryWrite.createUser`.
-5. `UserRepositoryWrite` persists via the `Muser` model and returns a plain `IUser` (projection hides `_id`/`__v` — see `mongo.projection.ts`).
-6. The controller responds `201` with the user; any error goes to `next(error)`.
-7. `OpenApiValidator` validates the **response** against the contract before sending it.
-
-`GET /users` is paginated: `limit`/`offset` query params (validated and coerced
-by the contract), forwarded by the controller to the service, which applies
-defaults (20/0) and passes an `IPagination` to the repository (`skip`/`limit`).
+1. `express.json` and `cookie-parser` parse the request; `ContextAsyncHooks` creates the tracking context (cid); OTel auto-instrumentation opens the HTTP span.
+2. `OpenApiValidator` validates the request (and the `bearerAuth` header) against `src/contracts/service.yaml` — an invalid body → 400 `ValidationError` before reaching the controller.
+3. `authenticate` verifies the access token and sets `req.auth`; `authorize({ subjectType: CUSTOMER })` blocks other subjects with 403.
+4. `CustomerController.addAddress` (arrow function property) extracts the address from the body and calls `customerService.addAddress(...)`.
+5. `CustomerService.addAddress` (decorated with `@ErrorHandler()`) loads the customer, resolves the delivery zone through the `IDeliveryZoneResolver` port and lets the `Customer` entity apply the address rules (limit of 5 → `BusinessRuleError` 422).
+6. `CustomerRepositoryWrite` persists via the `Mcustomer` model and returns a plain `ICustomer` (projection hides `_id`/`__v` — see `mongo.projection.ts`).
+7. The controller responds `201` with the address shaped by `customer.presenter.ts`; any error goes to `next(error)`.
+8. `OpenApiValidator` validates the **response** against the contract before sending it.
 
 ## OpenAPI contract (`src/contracts/service.yaml`)
 
