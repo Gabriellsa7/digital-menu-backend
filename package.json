@@ -1,6 +1,6 @@
 {
-  "name": "boilerplate",
-  "description": "Node.js + TypeScript REST API boilerplate: Clean Architecture, OpenAPI-first validation, MongoDB, OpenTelemetry with trace-correlated logs",
+  "name": "digital-menu-backend",
+  "description": "REST API of Digital Menu, a single-store food ordering system: customer login with Google or SMS, profiles and addresses. Clean Architecture, OpenAPI-first, MongoDB, OpenTelemetry.",
   "version": "1.0.0",
   "main": "dist/src/main.js",
   "engines": {
@@ -55,9 +55,9 @@
     "typescript-eslint": "^8.16.0"
   },
   "keywords": [],
-  "author": "",
+  "author": "Gabriel Santana",
   "license": "ISC",
-  "repository": "git@github.com:whitebeardit/node-boilerplate.git",
+  "repository": "git@github.com:Gabriellsa7/digital-menu-backend.git",
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.78.0",
