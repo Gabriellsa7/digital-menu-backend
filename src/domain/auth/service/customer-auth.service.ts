@@ -1,3 +1,4 @@
+import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
 import { ICustomer } from '../../customer/interfaces/customer.interface';
 import { ICustomerService } from '../../customer/interfaces/customer.service.interface';
 import { NotFoundError } from '../../errors/not-found.error';
@@ -39,20 +40,12 @@ export class CustomerAuthService implements ICustomerAuthService {
     this.googleIdentityVerifier = googleIdentityVerifier;
   }
 
-  /**
-   * Send a login code to the phone
-   * @param phone - The phone in any Brazilian format
-   * @returns The code request result
-   */
+  @ErrorHandler()
   async requestOtpCode(phone: string): Promise<IOtpCodeRequest> {
     return this.otpService.requestOtpCode(phone);
   }
 
-  /**
-   * Log in (or sign up) with an SMS code
-   * @param params - Phone, code and the client user agent
-   * @returns The customer, whether it is new and the session tokens
-   */
+  @ErrorHandler()
   async loginWithOtp({
     phone,
     code,
@@ -70,11 +63,7 @@ export class CustomerAuthService implements ICustomerAuthService {
     };
   }
 
-  /**
-   * Log in (or sign up) with a Google ID token
-   * @param params - The Google ID token and the client user agent
-   * @returns The customer, whether it is new and the session tokens
-   */
+  @ErrorHandler()
   async loginWithGoogle({
     idToken,
     userAgent,
@@ -89,12 +78,7 @@ export class CustomerAuthService implements ICustomerAuthService {
     };
   }
 
-  /**
-   * Link a Google account to the logged-in customer
-   * @param customerId - The customer's ID
-   * @param idToken - The Google ID token
-   * @returns The updated customer
-   */
+  @ErrorHandler()
   async linkGoogleAccount(
     customerId: string,
     idToken: string,
@@ -103,12 +87,7 @@ export class CustomerAuthService implements ICustomerAuthService {
     return this.customerService.linkGoogleAccount(customerId, profile);
   }
 
-  /**
-   * Rotate the refresh token and issue a new access token
-   * @param params - The current refresh token and the client user agent
-   * @returns The new session tokens
-   * @throws UnauthorizedError when the session is invalid or the customer no longer exists
-   */
+  @ErrorHandler()
   async refreshSession({
     refreshToken,
     userAgent,
@@ -133,10 +112,7 @@ export class CustomerAuthService implements ICustomerAuthService {
     };
   }
 
-  /**
-   * End the current session (AUTH-R05). Safe to call without a token.
-   * @param refreshToken - The refresh token from the cookie, if any
-   */
+  @ErrorHandler()
   async logout(refreshToken?: string): Promise<void> {
     if (refreshToken) {
       await this.authSessionService.revokeSession(refreshToken);
@@ -157,13 +133,11 @@ export class CustomerAuthService implements ICustomerAuthService {
   }
 
   private async assertCustomerExists(customerId: string): Promise<void> {
-    try {
-      await this.customerService.getCustomerById(customerId);
-    } catch (error) {
+    await this.customerService.getCustomerById(customerId).catch((error) => {
       if (error instanceof NotFoundError) {
         throw new UnauthorizedError('Invalid session', 'SESSION_INVALID');
       }
       throw error;
-    }
+    });
   }
 }

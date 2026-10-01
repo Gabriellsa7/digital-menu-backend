@@ -1,3 +1,4 @@
+import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
 import { randomUUID } from 'crypto';
 import { Logger } from 'traceability';
 import { IClock } from '../../common/clock.interface';
@@ -45,11 +46,7 @@ export class AuthSessionService implements IAuthSessionService {
     this.refreshTokenTtlDays = refreshTokenTtlDays;
   }
 
-  /**
-   * Start a new session family after a successful login
-   * @param params - The authenticated subject and the client user agent
-   * @returns A new access token and refresh token
-   */
+  @ErrorHandler()
   async startSession({
     subject,
     userAgent,
@@ -71,14 +68,7 @@ export class AuthSessionService implements IAuthSessionService {
     };
   }
 
-  /**
-   * Exchange a refresh token for a new one (rotation, AUTH-R04). Presenting a
-   * token that was already rotated revokes the whole family, since it means
-   * the token leaked.
-   * @param params - The current refresh token and the expected subject type
-   * @returns The subject and the new refresh token
-   * @throws UnauthorizedError when the token is unknown, reused or expired
-   */
+  @ErrorHandler()
   async rotateSession({
     refreshToken,
     subjectType,
@@ -107,8 +97,6 @@ export class AuthSessionService implements IAuthSessionService {
         userAgent,
       });
 
-    // The guarded revoke also protects against two concurrent refreshes
-    // with the same token: only the first one wins.
     const wasActive =
       !currentSession.revokedAt &&
       (await this.refreshSessionRepositoryWrite.revokeRefreshSessionById(
@@ -137,11 +125,7 @@ export class AuthSessionService implements IAuthSessionService {
     };
   }
 
-  /**
-   * Sign a short-lived access token for the subject
-   * @param subject - The authenticated subject
-   * @returns The signed access token and its lifetime
-   */
+  @ErrorHandler()
   createAccessToken(subject: IAuthSubject): ISignedAccessToken {
     return this.tokenService.signAccessToken({
       sub: subject.subjectId,
@@ -150,11 +134,7 @@ export class AuthSessionService implements IAuthSessionService {
     });
   }
 
-  /**
-   * Revoke the session of a refresh token (logout, AUTH-R05). Unknown tokens
-   * are ignored so logout is always safe to call.
-   * @param refreshToken - The refresh token to revoke
-   */
+  @ErrorHandler()
   async revokeSession(refreshToken: string): Promise<void> {
     const tokenHash = this.tokenService.hashRefreshToken(refreshToken);
     const session =
@@ -170,11 +150,7 @@ export class AuthSessionService implements IAuthSessionService {
     );
   }
 
-  /**
-   * Revoke every session of a subject (e.g. a deactivated staff user)
-   * @param subjectId - The subject's ID
-   * @param subjectType - Whether it is a staff user or a customer
-   */
+  @ErrorHandler()
   async revokeAllSessionsForSubject(
     subjectId: string,
     subjectType: ESubjectType,
