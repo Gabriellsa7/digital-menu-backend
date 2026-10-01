@@ -21,7 +21,6 @@ export enum EFulfillmentType {
 export enum EOrderActorType {
   CUSTOMER = 'CUSTOMER',
   STAFF = 'STAFF',
-  // Scheduled jobs, e.g. expiring unpaid orders
   SYSTEM = 'SYSTEM',
 }
 
@@ -37,8 +36,6 @@ export interface IOrderStatusEntry {
   reason?: string;
 }
 
-// Snapshots copy the data at checkout so later menu edits never change past orders.
-
 export interface IOrderItemOption {
   groupId: string;
   groupName: string;
@@ -52,7 +49,6 @@ export interface IOrderItem {
   productId: string;
   name: string;
   imageUrl?: string;
-  /** Base price plus selected options, for one unit */
   unitPriceInCents: number;
   quantity: number;
   options: IOrderItemOption[];
@@ -80,7 +76,6 @@ export interface IOrderCouponSnapshot {
 
 export interface IOrder {
   id: string;
-  /** Sequential, human-friendly number (#1042) */
   number: number;
   customerId: string;
   customerSnapshot: IOrderCustomerSnapshot;

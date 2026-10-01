@@ -6,7 +6,6 @@ export enum EManualStatus {
   FORCED_CLOSED = 'FORCED_CLOSED',
 }
 
-// Matches JavaScript/Luxon numbering where Sunday is 0.
 export enum EWeekday {
   SUNDAY = 0,
   MONDAY = 1,
@@ -19,9 +18,7 @@ export enum EWeekday {
 
 export interface IOpeningHour {
   weekday: EWeekday;
-  /** HH:mm in the store timezone */
   opensAt: string;
-  /** HH:mm; earlier than opensAt when the interval crosses midnight */
   closesAt: string;
 }
 
