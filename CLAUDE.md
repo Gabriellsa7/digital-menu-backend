@@ -5,7 +5,7 @@ precedence over any document** (including `Agents.md` — see "Known divergences
 
 ## What this is
 
-A REST API boilerplate in Node.js 20 + TypeScript (strict, CommonJS) with Clean
+A REST API boilerplate in Node.js 24 + TypeScript (strict, CommonJS) with Clean
 Architecture, contract-first design (OpenAPI validates requests **and** responses
 at runtime), MongoDB via Mongoose, and observability with OpenTelemetry plus
 structured logs (winston via the `traceability` lib) carrying the `trace_id` on
