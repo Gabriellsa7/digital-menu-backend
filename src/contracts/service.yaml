@@ -1,7 +1,7 @@
 openapi: 3.0.2
 info:
-  title: Example API
-  description: This is a sample API to demonstrate OpenAPI specification.
+  title: Digital Menu API
+  description: REST API of Digital Menu, a single-store food ordering system.
   version: 1.0.0
   contact:
     name: API Support
@@ -19,202 +19,12 @@ servers:
   - url: http://localhost
 
 tags:
-  - name: Users
-    description: User management operations
   - name: Customer auth
     description: Customer login with Google or SMS code, session refresh and logout
   - name: Customer
     description: Logged-in customer profile and addresses
 
 paths:
-  /users:
-    get:
-      tags:
-        - Users
-      summary: Get all users
-      operationId: getUsers
-      description: Retrieve a paginated list of users.
-      parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-          description: Maximum number of users to return
-        - name: offset
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
-          description: Number of users to skip
-      responses:
-        '200':
-          description: A list of users
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    post:
-      tags:
-        - Users
-      summary: Create a new user
-      operationId: createUser
-      description: Add a new user to the database.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NewUser'
-      responses:
-        '201':
-          description: User created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '409':
-          description: A user with this email already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /users/{id}:
-    get:
-      tags:
-        - Users
-      summary: Get a user by ID
-      operationId: getUserById
-      description: Retrieve a user by their unique ID.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The ID of the user
-      responses:
-        '200':
-          description: User found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    put:
-      tags:
-        - Users
-      summary: Update a user
-      operationId: updateUser
-      description: Update the information of an existing user by ID.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The ID of the user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateUser'
-      responses:
-        '200':
-          description: User updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    delete:
-      tags:
-        - Users
-      summary: Delete a user
-      operationId: deleteUser
-      description: Delete an existing user by ID.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The ID of the user
-      responses:
-        '200':
-          description: User deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessMessage'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
   /auth/customer/otp/request:
     post:
       tags:
@@ -852,54 +662,6 @@ components:
           description: Present only when the address is served (CUS-R03)
         isDefault:
           type: boolean
-    User:
-      type: object
-      properties:
-        id:
-          type: string
-          description: The unique identifier of the user
-        name:
-          type: string
-          description: The user's name
-        email:
-          type: string
-          format: email
-          description: The user's email address
-        createdAt:
-          type: string
-          format: date-time
-          description: The date and time the user was created
-    NewUser:
-      type: object
-      required:
-        - id
-        - name
-        - email
-      properties:
-        id:
-          type: string
-          description: The unique identifier for the user
-        name:
-          type: string
-          description: The user's name
-        email:
-          type: string
-          format: email
-          description: The user's email address
-        createdAt:
-          type: string
-          format: date-time
-          description: The creation timestamp (optional)
-    UpdateUser:
-      type: object
-      properties:
-        name:
-          type: string
-          description: The user's name
-        email:
-          type: string
-          format: email
-          description: The user's email address
     Error:
       type: object
       required:
@@ -909,7 +671,7 @@ components:
         message:
           type: string
           description: Error message describing what went wrong
-          example: 'User not found'
+          example: 'Customer not found'
         status:
           type: integer
           description: HTTP status code
@@ -922,7 +684,7 @@ components:
         path:
           type: string
           description: The API endpoint that generated the error
-          example: '/users/123'
+          example: '/me'
         code:
           type: string
           description: Machine-readable reason from the business rules (e.g. ADDRESS_LIMIT_REACHED)
@@ -959,7 +721,7 @@ components:
         path:
           type: string
           description: The API endpoint that generated the error
-          example: '/users'
+          example: '/me/addresses'
         errors:
           type: array
           description: List of specific validation errors
@@ -978,17 +740,3 @@ components:
                 type: string
                 description: The invalid value provided
                 example: ''
-    SuccessMessage:
-      type: object
-      required:
-        - message
-      properties:
-        message:
-          type: string
-          description: Success message
-          example: 'User deleted successfully'
-        timestamp:
-          type: string
-          format: date-time
-          description: When the operation was completed
-          example: '2025-07-15T17:30:00.000Z'
