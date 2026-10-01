@@ -1,3 +1,4 @@
+import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
 import { randomUUID } from 'crypto';
 import { Logger } from 'traceability';
 import { IClock } from '../../common/clock.interface';
@@ -42,26 +43,14 @@ export class CustomerService implements ICustomerService {
     this.clock = clock;
   }
 
-  /**
-   * Get a customer by ID
-   * @param id - The customer's ID
-   * @returns The customer
-   * @throws NotFoundError when the customer does not exist
-   */
+  @ErrorHandler()
   async getCustomerById(id: string): Promise<ICustomer> {
     const customer = await this.customerRepositoryRead.findCustomerById(id);
-    if (!customer) {
-      throw new NotFoundError('Customer not found');
-    }
-    return customer;
+
+    return customer ? customer : this.throwCustomerNotFound();
   }
 
-  /**
-   * Log in by a phone just verified by OTP; signs up on the first login
-   * (CUS-R01). Contact phones of other accounts never match (CUS-R05).
-   * @param phone - The verified phone in E.164
-   * @returns The customer and whether it was just created
-   */
+  @ErrorHandler()
   async findOrCreateCustomerByVerifiedPhone(
     phone: string,
   ): Promise<IFoundOrCreatedCustomer> {
@@ -83,12 +72,7 @@ export class CustomerService implements ICustomerService {
     };
   }
 
-  /**
-   * Log in with a verified Google profile; signs up on the first login
-   * (GGL-R02). E-mail is never used to match other accounts.
-   * @param profile - The verified Google profile
-   * @returns The customer and whether it was just created
-   */
+  @ErrorHandler()
   async findOrCreateCustomerByGoogle(
     profile: IGoogleProfile,
   ): Promise<IFoundOrCreatedCustomer> {
@@ -118,14 +102,7 @@ export class CustomerService implements ICustomerService {
     };
   }
 
-  /**
-   * Link a Google account to a logged-in customer (GGL-R03)
-   * @param customerId - The customer's ID
-   * @param profile - The verified Google profile
-   * @returns The updated customer
-   * @throws ConflictError GOOGLE_ALREADY_LINKED when another Google account is linked
-   * @throws ConflictError GOOGLE_ACCOUNT_IN_USE when the Google account belongs to another customer
-   */
+  @ErrorHandler()
   async linkGoogleAccount(
     customerId: string,
     profile: IGoogleProfile,
@@ -161,14 +138,7 @@ export class CustomerService implements ICustomerService {
     });
   }
 
-  /**
-   * Update the name and the contact phone (CUS-R05, CUS-R06)
-   * @param params - The customer's ID and the fields to change
-   * @returns The updated customer
-   * @throws BusinessRuleError INVALID_PHONE when the phone is not a BR mobile
-   * @throws BusinessRuleError PHONE_IS_ONLY_LOGIN when changing the verified
-   * phone of an account without Google, which would lock the customer out
-   */
+  @ErrorHandler()
   async updateCustomerProfile({
     customerId,
     name,
@@ -211,22 +181,13 @@ export class CustomerService implements ICustomerService {
     return this.updateCustomer(customerId, fields);
   }
 
-  /**
-   * List the customer's saved addresses
-   * @param customerId - The customer's ID
-   * @returns The addresses
-   */
+  @ErrorHandler()
   async listAddresses(customerId: string): Promise<IAddress[]> {
     const customer = await this.getCustomerById(customerId);
     return customer.addresses;
   }
 
-  /**
-   * Save a new address, resolving its delivery zone (CUS-R02, CUS-R03)
-   * @param params - The customer's ID and the address data
-   * @returns The saved address
-   * @throws BusinessRuleError ADDRESS_LIMIT_REACHED when 5 addresses already exist
-   */
+  @ErrorHandler()
   async addAddress({
     customerId,
     address,
@@ -245,12 +206,7 @@ export class CustomerService implements ICustomerService {
     return new Customer(updated).findAddress(newAddress.id);
   }
 
-  /**
-   * Replace an address, resolving its delivery zone again
-   * @param params - The customer's ID, the address ID and the new data
-   * @returns The updated address
-   * @throws NotFoundError when the address does not exist
-   */
+  @ErrorHandler()
   async updateAddress({
     customerId,
     addressId,
@@ -268,12 +224,7 @@ export class CustomerService implements ICustomerService {
     return new Customer(updated).findAddress(addressId);
   }
 
-  /**
-   * Remove an address
-   * @param customerId - The customer's ID
-   * @param addressId - The address ID
-   * @throws NotFoundError when the address does not exist
-   */
+  @ErrorHandler()
   async removeAddress(customerId: string, addressId: string): Promise<void> {
     const customer = new Customer(await this.getCustomerById(customerId));
     await this.updateCustomer(customerId, {
@@ -281,13 +232,7 @@ export class CustomerService implements ICustomerService {
     });
   }
 
-  /**
-   * Make an address the default one
-   * @param customerId - The customer's ID
-   * @param addressId - The address ID
-   * @returns All addresses with the new default
-   * @throws NotFoundError when the address does not exist
-   */
+  @ErrorHandler()
   async setDefaultAddress(
     customerId: string,
     addressId: string,
@@ -299,12 +244,7 @@ export class CustomerService implements ICustomerService {
     return updated.addresses;
   }
 
-  /**
-   * Ensure the customer has what an order needs (CUS-R04)
-   * @param customerId - The customer's ID
-   * @returns The customer
-   * @throws BusinessRuleError CUSTOMER_PROFILE_INCOMPLETE listing the missing fields
-   */
+  @ErrorHandler()
   async assertCustomerCanOrder(customerId: string): Promise<ICustomer> {
     const customer = new Customer(await this.getCustomerById(customerId));
     const missingFields = customer.missingOrderFields();
@@ -347,10 +287,12 @@ export class CustomerService implements ICustomerService {
       id,
       fields,
     );
-    if (!updated) {
-      throw new NotFoundError('Customer not found');
-    }
-    return updated;
+
+    return updated ? updated : this.throwCustomerNotFound();
+  }
+
+  private throwCustomerNotFound(): never {
+    throw new NotFoundError('Customer not found');
   }
 
   private normalizePhoneOrThrow(phone: string): string {

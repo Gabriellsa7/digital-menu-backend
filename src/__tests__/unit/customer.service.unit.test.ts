@@ -64,7 +64,6 @@ beforeEach(() => {
   });
 });
 
-/** Makes the write repository apply `$set` on top of the given customer */
 function applyUpdatesTo(customer: ICustomer) {
   customerRepositoryWrite.updateCustomerById.mockImplementation(
     async (_id, { set = {} }) => ({ ...customer, ...set }),
