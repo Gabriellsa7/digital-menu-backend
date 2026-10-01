@@ -5,8 +5,6 @@ export interface IMOtp extends IOtp {
   _id: Types.ObjectId;
 }
 
-// Codes expire after 5 minutes, but documents are kept for 1 hour because the
-// hourly request limit (OTP-R03) counts them.
 const OTP_RETENTION_SECONDS = 60 * 60;
 
 export const otpSchema = new mongoose.Schema<IMOtp>(

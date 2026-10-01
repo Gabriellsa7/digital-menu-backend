@@ -26,5 +26,4 @@ export const refreshSessionSchema = new mongoose.Schema<IMRefreshSession>(
 );
 
 refreshSessionSchema.index({ subjectId: 1, subjectType: 1 });
-// Mongo deletes the session once it expires
 refreshSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

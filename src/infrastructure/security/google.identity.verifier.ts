@@ -16,10 +16,6 @@ export class GoogleIdentityVerifier implements IGoogleIdentityVerifier {
     this.client = client ?? new OAuth2Client(clientId);
   }
 
-  /**
-   * Verify signature, audience, issuer and expiry of a Google ID token
-   * (GGL-R01). The library already rejects foreign issuers and audiences.
-   */
   async verifyIdToken(idToken: string): Promise<IGoogleProfile> {
     let payload;
     try {

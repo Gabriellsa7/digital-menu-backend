@@ -9,7 +9,6 @@ export class CustomerServiceFactory {
     return new CustomerService({
       customerRepositoryRead: new CustomerRepositoryRead(),
       customerRepositoryWrite: new CustomerRepositoryWrite(),
-      // TODO(delivery-zone): swap for a resolver backed by the delivery-zone service
       deliveryZoneResolver: new PendingDeliveryZoneResolver(),
       clock: new SystemClock(),
     });

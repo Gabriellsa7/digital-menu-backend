@@ -7,7 +7,6 @@ import { AuthSessionServiceFactory } from './auth-session.service.factory';
 import { CustomerServiceFactory } from './customer.service.factory';
 import { OtpServiceFactory } from './otp.service.factory';
 
-/** External adapters tests can replace with fakes */
 export interface IParamsCustomerAuthAdapters {
   googleIdentityVerifier?: IGoogleIdentityVerifier;
   smsProvider?: ISmsProvider;

@@ -8,11 +8,6 @@ const ACTIVE_SESSION = { revokedAt: { $exists: false } };
 export class RefreshSessionRepositoryWrite
   implements IRefreshSessionRepositoryWrite
 {
-  /**
-   * Create a new refresh session
-   * @param session - The session to create
-   * @returns The created session
-   */
   async createRefreshSession(
     session: IRefreshSession,
   ): Promise<IRefreshSession> {
@@ -21,13 +16,6 @@ export class RefreshSessionRepositoryWrite
     return createdSession;
   }
 
-  /**
-   * Revoke a session only if it is still active
-   * @param id - The session ID
-   * @param revokedAt - When it was revoked
-   * @param replacedById - The session that replaced it after a rotation
-   * @returns true when this call revoked it
-   */
   async revokeRefreshSessionById(
     id: string,
     revokedAt: Date,
@@ -40,11 +28,6 @@ export class RefreshSessionRepositoryWrite
     return modifiedCount === 1;
   }
 
-  /**
-   * Revoke every active session of a rotation family
-   * @param familyId - The family ID
-   * @param revokedAt - When they were revoked
-   */
   async revokeRefreshSessionFamily(
     familyId: string,
     revokedAt: Date,
@@ -55,12 +38,6 @@ export class RefreshSessionRepositoryWrite
     );
   }
 
-  /**
-   * Revoke every active session of a subject
-   * @param subjectId - The subject's ID
-   * @param subjectType - Staff user or customer
-   * @param revokedAt - When they were revoked
-   */
   async revokeRefreshSessionsBySubject(
     subjectId: string,
     subjectType: ESubjectType,

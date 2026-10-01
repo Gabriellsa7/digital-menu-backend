@@ -5,8 +5,6 @@ const OTP_CODE_LENGTH = 6;
 const OTP_CODE_UPPER_BOUND = 10 ** OTP_CODE_LENGTH;
 
 export class CryptoOtpCodeGenerator implements IOtpCodeGenerator {
-  // The pepper is a server secret, so a leaked database alone is not enough
-  // to brute-force the 1M possible codes.
   constructor(private readonly pepper: string) {}
 
   generateOtpCode(): string {

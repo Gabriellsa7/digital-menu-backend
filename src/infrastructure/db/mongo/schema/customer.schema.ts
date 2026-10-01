@@ -4,16 +4,10 @@ import {
   ICustomer,
 } from '../../../../domain/customer/interfaces/customer.interface';
 
-/**
- * Persistence shape of the customer document: the domain interface plus the
- * Mongo-specific fields.
- */
 export interface IMCustomer extends ICustomer {
   _id: Types.ObjectId;
 }
 
-// Optional fields have no `default: null`: a missing value must be absent
-// from the document so the sparse/partial indexes below work.
 const addressSchema = new mongoose.Schema<IAddress>(
   {
     id: { type: String, required: true },
@@ -48,7 +42,6 @@ export const customerSchema = new mongoose.Schema<IMCustomer>(
 );
 
 customerSchema.index({ googleSub: 1 }, { unique: true, sparse: true });
-// Only verified phones are login identities (CUS-R05)
 customerSchema.index(
   { phone: 1 },
   {

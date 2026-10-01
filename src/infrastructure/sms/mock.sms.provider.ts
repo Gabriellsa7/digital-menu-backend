@@ -6,10 +6,6 @@ import {
 
 const MAX_KEPT_MESSAGES = 50;
 
-/**
- * SMS is simulated in the MVP: nothing leaves the server. The last messages
- * are kept in memory so tests can read them.
- */
 export class MockSmsProvider implements ISmsProvider {
   private readonly messages: IParamsSendSms[] = [];
 
