@@ -1,12 +1,9 @@
-// OpenTelemetry must be initialized before any instrumented module (express,
-// mongoose, http) is imported. Keep this import as the first line.
 import './infrastructure/telemetry/tracing';
 import path from 'path';
 import { Logger } from 'traceability';
 import { Server } from './interfaces/http/server';
 import { env } from './infrastructure/config/env';
 
-import { UserControllerFactory } from './infrastructure/config/factories/user.controller.factory';
 import { CustomerAuthControllerFactory } from './infrastructure/config/factories/customer-auth.controller.factory';
 import { CustomerControllerFactory } from './infrastructure/config/factories/customer.controller.factory';
 
@@ -20,7 +17,6 @@ const SHUTDOWN_TIMEOUT_MILLISECONDS = 10000;
 const app = new Server({
   port: env.port,
   controllers: [
-    UserControllerFactory.create(),
     CustomerAuthControllerFactory.create(),
     CustomerControllerFactory.create(),
   ],
@@ -41,7 +37,6 @@ async function start() {
       await app.closeDatabase();
       process.exit(0);
     });
-    // Failsafe: force exit if connections refuse to drain
     setTimeout(() => process.exit(1), SHUTDOWN_TIMEOUT_MILLISECONDS).unref();
   };
   process.once('SIGTERM', () => shutdown('SIGTERM'));
