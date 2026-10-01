@@ -21,14 +21,12 @@ class ThrowingController implements IController {
 
   constructor() {
     this.router.get(
-      '/users',
+      '/me',
       (req: Request, res: Response, next: NextFunction) => {
         next(new Error('unexpected failure'));
       },
     );
-    // Violates the contract on purpose: the 404 Error schema requires
-    // message and status, so response validation raises a 500 HttpError
-    this.router.get('/users/:id', (req: Request, res: Response) => {
+    this.router.get('/me/addresses', (req: Request, res: Response) => {
       res.status(404).json({});
     });
   }
@@ -59,7 +57,9 @@ describe('When we check the health endpoint', () => {
 
 describe('When an unexpected error reaches the central handler', () => {
   it('should respond 500 with the contract error shape', async () => {
-    const { statusCode, body } = await supertest(app.app).get('/users');
+    const { statusCode, body } = await supertest(app.app)
+      .get('/me')
+      .set('Authorization', 'Bearer any-token');
 
     expect(statusCode).toBe(500);
     expect(body).toMatchObject({
@@ -71,7 +71,9 @@ describe('When an unexpected error reaches the central handler', () => {
 
 describe('When a response violates the contract', () => {
   it('should log and respond 500 through the central handler', async () => {
-    const { statusCode, body } = await supertest(app.app).get('/users/any-id');
+    const { statusCode, body } = await supertest(app.app)
+      .get('/me/addresses')
+      .set('Authorization', 'Bearer any-token');
 
     expect(statusCode).toBe(500);
     expect(body).toMatchObject({ status: 500 });
