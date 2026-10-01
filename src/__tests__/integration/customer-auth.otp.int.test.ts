@@ -89,7 +89,6 @@ describe('When we verify an SMS code', () => {
 
   it('should log the same customer in on the next login', async () => {
     const { phone, customerId } = await loginCustomerWithOtp();
-    // Native driver: Mongoose treats createdAt as immutable with timestamps
     await Motp.collection.updateMany(
       { phone },
       { $set: { createdAt: new Date(0) } },

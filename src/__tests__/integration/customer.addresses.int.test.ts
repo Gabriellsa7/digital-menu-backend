@@ -40,7 +40,6 @@ describe('When the customer adds an address', () => {
       isDefault: true,
     });
     expect(body.id).toEqual(expect.any(String));
-    // No delivery zone module yet: every address is "not served"
     expect(body.deliveryZoneId).toBeUndefined();
   });
 

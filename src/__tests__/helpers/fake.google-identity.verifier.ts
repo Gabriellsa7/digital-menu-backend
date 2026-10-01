@@ -6,7 +6,6 @@ import { UnauthorizedError } from '../../domain/errors/unauthorized.error';
 
 const FAKE_TOKEN_PREFIX = 'fake-google';
 
-/** Builds a token the fake verifier accepts */
 export function fakeGoogleIdToken(profile: IGoogleProfile): string {
   return [
     FAKE_TOKEN_PREFIX,
@@ -16,10 +15,6 @@ export function fakeGoogleIdToken(profile: IGoogleProfile): string {
   ].join('|');
 }
 
-/**
- * Accepts tokens built by `fakeGoogleIdToken` and rejects anything else,
- * so integration tests never call Google.
- */
 export class FakeGoogleIdentityVerifier implements IGoogleIdentityVerifier {
   async verifyIdToken(idToken: string): Promise<IGoogleProfile> {
     const [prefix, sub, email, name] = idToken.split('|');

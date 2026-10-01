@@ -28,7 +28,6 @@ describe('When a customer logs in with Google', () => {
     });
     expect(body.customer.phone).toBeUndefined();
 
-    // Absent, not null: keeps the sparse/partial unique indexes working
     const customerInDb = await Mcustomer.findOne({ id: body.customer.id })
       .lean()
       .exec();

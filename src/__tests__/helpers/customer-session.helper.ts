@@ -8,7 +8,6 @@ export function randomBrazilianMobile(): string {
   return `+55119${subscriber}`;
 }
 
-/** Returns the `name=value` pair of a Set-Cookie header, ready for `.set('Cookie', ...)` */
 export function findCookie(
   setCookieHeader: string[] | string | undefined,
   name: string,
@@ -19,10 +18,6 @@ export function findCookie(
   return cookies.find((cookie) => cookie.startsWith(`${name}=`))?.split(';')[0];
 }
 
-/**
- * Logs a customer in through the real OTP endpoints, reading the simulated
- * code from `debugCode` (OTP_EXPOSE_CODE=true in .env.test).
- */
 export async function loginCustomerWithOtp(phone = randomBrazilianMobile()) {
   const requestResponse = await supertest(app.app)
     .post('/auth/customer/otp/request')
