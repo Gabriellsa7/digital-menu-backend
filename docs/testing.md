@@ -41,27 +41,32 @@ Support inside `src/`:
 
 | Type | Suffix | Location | Real example |
 | --- | --- | --- | --- |
-| Unit | `.unit.test.ts` | `src/__tests__/unit/` | `user.service.unit.test.ts` |
-| Integration | `.int.test.ts` | `src/__tests__/integration/` | `user.create.int.test.ts` |
+| Unit | `.unit.test.ts` | `src/__tests__/unit/` | `customer.service.unit.test.ts` |
+| Integration | `.int.test.ts` | `src/__tests__/integration/` | `customer.addresses.int.test.ts` |
 
-- Name starts with the subject under test (`user.create.int.test.ts`), never generic.
+- Name starts with the subject under test (`customer.addresses.int.test.ts`), never generic.
 - Do not mix unit and integration specs in the same file.
 - Blocks: `describe('When we ...')` / `it('should ...')`.
 
-## Integration test — anatomy (real pattern from `user.create.int.test.ts`)
+## Integration test — anatomy (real pattern from `customer.addresses.int.test.ts`)
 
 ```ts
 import supertest from 'supertest';
 import { app } from '../../../jest/setup-integration-tests';
 
-describe('When we create a user', () => {
-  it('should return 201 and persist the user', async () => {
-    const response = await supertest(app.app).post('/users').send({
-      id: '123',
-      name: 'John Doe',
-      email: 'john@example.com',
-    });
-    expect(response.status).toBe(201);
+import { loginCustomerWithOtp } from '../helpers/customer-session.helper';
+
+describe('When the customer adds an address', () => {
+  it('should save the first address as the default one', async () => {
+    const { accessToken } = await loginCustomerWithOtp();
+
+    const { body, statusCode } = await supertest(app.app)
+      .post('/me/addresses')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(AN_ADDRESS);
+
+    expect(statusCode).toBe(201);
+    expect(body.isDefault).toBe(true);
   });
 });
 ```
@@ -78,8 +83,8 @@ Watch out for:
 ## Unit tests
 
 - Mock every external dependency (repositories, producers) — services receive
-  everything via constructor, so pass typed mocks: `jest.Mocked<IUserRepositoryRead>`.
-  See `user.service.unit.test.ts` for the canonical pattern (success, conflict
+  everything via constructor, so pass typed mocks: `jest.Mocked<ICustomerRepositoryRead>`.
+  See `customer.service.unit.test.ts` for the canonical pattern (success, conflict
   and not-found scenarios per method).
 - Deterministic and fast (<100ms per test).
 - OTel stays disabled (`OTEL_SDK_DISABLED=true` in `.env.test`); to test
