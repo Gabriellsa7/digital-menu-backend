@@ -71,6 +71,11 @@ export class ProductService implements IProductService {
   }
 
   @ErrorHandler()
+  async listActiveProducts(): Promise<IProduct[]> {
+    return this.productRepositoryRead.listActiveProducts();
+  }
+
+  @ErrorHandler()
   async findProductsByIds(ids: string[]): Promise<IProduct[]> {
     if (ids.length === 0) {
       return [];
