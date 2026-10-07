@@ -97,6 +97,11 @@ beforeEach(() => {
       ),
     } as unknown as IPaymentService,
     orderTransitionService,
+    orderEventPublisher: {
+      publishOrderCreated: jest.fn(),
+      publishOrderStatusChanged: jest.fn(),
+      publishOrderPaymentUpdated: jest.fn(),
+    },
     clock: new FixedClock(),
   });
 });

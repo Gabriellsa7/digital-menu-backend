@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { IClock } from '../../common/clock.interface';
 import { BusinessRuleError } from '../../errors/business-rule.error';
 import { NotFoundError } from '../../errors/not-found.error';
+import { IStoreEventPublisher } from '../../store/events/store.event.publisher';
 import {
   IOption,
   IOptionGroup,
@@ -24,17 +25,20 @@ export class OptionGroupService implements IOptionGroupService {
   private optionGroupRepositoryRead: IOptionGroupRepositoryRead;
   private optionGroupRepositoryWrite: IOptionGroupRepositoryWrite;
   private optionGroupUsage: IOptionGroupUsage;
+  private storeEventPublisher: IStoreEventPublisher;
   private clock: IClock;
 
   constructor({
     optionGroupRepositoryRead,
     optionGroupRepositoryWrite,
     optionGroupUsage,
+    storeEventPublisher,
     clock,
   }: IParamsOptionGroupService) {
     this.optionGroupRepositoryRead = optionGroupRepositoryRead;
     this.optionGroupRepositoryWrite = optionGroupRepositoryWrite;
     this.optionGroupUsage = optionGroupUsage;
+    this.storeEventPublisher = storeEventPublisher;
     this.clock = clock;
   }
 
@@ -124,7 +128,15 @@ export class OptionGroupService implements IOptionGroupService {
       optionId,
       isAvailable,
     );
-    return updated ? updated : this.throwOptionGroupNotFound();
+    if (!updated) {
+      this.throwOptionGroupNotFound();
+    }
+    this.storeEventPublisher.publishOptionAvailabilityChanged({
+      optionGroupId,
+      optionId,
+      isAvailable,
+    });
+    return updated;
   }
 
   private buildOptions(

@@ -9,6 +9,7 @@ import { CustomerServiceFactory } from './customer.service.factory';
 import { OrderPricingServiceFactory } from './order-pricing.service.factory';
 import { OrderTransitionServiceFactory } from './order-transition.service.factory';
 import { PaymentServiceFactory } from './payment.service.factory';
+import { OrderEventPublisherFactory } from './order-event-publisher.factory';
 
 export class OrderServiceFactory {
   static create() {
@@ -22,6 +23,7 @@ export class OrderServiceFactory {
       couponService: CouponServiceFactory.create(),
       paymentService: PaymentServiceFactory.create(),
       orderTransitionService: OrderTransitionServiceFactory.create(),
+      orderEventPublisher: OrderEventPublisherFactory.create(),
       clock: new SystemClock(),
     });
   }

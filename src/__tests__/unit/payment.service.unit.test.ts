@@ -63,6 +63,11 @@ beforeEach(() => {
       orderRepositoryWrite as unknown as IOrderRepositoryWrite,
     orderTransitionService,
     paymentGateway: new MockPaymentGateway(),
+    orderEventPublisher: {
+      publishOrderCreated: jest.fn(),
+      publishOrderStatusChanged: jest.fn(),
+      publishOrderPaymentUpdated: jest.fn(),
+    },
     clock,
   });
 });

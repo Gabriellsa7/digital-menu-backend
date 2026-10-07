@@ -10,6 +10,7 @@ import {
   IParamsListProducts,
   IProductRepositoryRead,
 } from '../repository/product.repository.read';
+import { IStoreEventPublisher } from '../../store/events/store.event.publisher';
 import { IProductRepositoryWrite } from '../repository/product.repository.write';
 import { IProduct } from './product.interface';
 
@@ -39,6 +40,7 @@ export interface IParamsProductService {
   categoryService: ICategoryService;
   optionGroupService: IOptionGroupService;
   storageProvider: IStorageProvider;
+  storeEventPublisher: IStoreEventPublisher;
   clock: IClock;
 }
 

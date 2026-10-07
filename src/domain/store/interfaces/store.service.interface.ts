@@ -4,6 +4,7 @@ import {
   IImageFile,
   IStorageProvider,
 } from '../../common/storage.provider.interface';
+import { IStoreEventPublisher } from '../events/store.event.publisher';
 import { IStoreRepositoryRead } from '../repository/store.repository.read';
 import { IStoreRepositoryWrite } from '../repository/store.repository.write';
 import {
@@ -40,6 +41,7 @@ export interface IParamsStoreService {
   storeRepositoryRead: IStoreRepositoryRead;
   storeRepositoryWrite: IStoreRepositoryWrite;
   storageProvider: IStorageProvider;
+  storeEventPublisher: IStoreEventPublisher;
   clock: IClock;
 }
 
@@ -50,5 +52,6 @@ export interface IStoreService {
   setOpeningHours(openingHours: IOpeningHour[]): Promise<IStore>;
   setManualStatus(manualStatus: EManualStatus): Promise<IStoreWithStatus>;
   assertAcceptingOrders(): Promise<IStore>;
+  refreshStoreStatus(): Promise<IStoreStatus>;
   setStoreImage(kind: EStoreImageKind, file?: IImageFile): Promise<IStore>;
 }

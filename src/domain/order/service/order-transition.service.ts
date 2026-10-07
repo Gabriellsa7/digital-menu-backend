@@ -4,6 +4,7 @@ import { IClock } from '../../common/clock.interface';
 import { ITransactionRunner } from '../../common/transaction.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
 import { ConflictError } from '../../errors/conflict.error';
+import { IOrderEventPublisher } from '../events/order.event.publisher';
 import { IPaymentGateway } from '../../payment/interfaces/payment.gateway.interface';
 import {
   EPaymentStatus,
@@ -26,6 +27,7 @@ export class OrderTransitionService implements IOrderTransitionService {
   private couponService: ICouponService;
   private paymentGateway: IPaymentGateway;
   private transactionRunner: ITransactionRunner;
+  private orderEventPublisher: IOrderEventPublisher;
   private clock: IClock;
 
   constructor({
@@ -33,12 +35,14 @@ export class OrderTransitionService implements IOrderTransitionService {
     couponService,
     paymentGateway,
     transactionRunner,
+    orderEventPublisher,
     clock,
   }: IParamsOrderTransitionService) {
     this.orderRepositoryWrite = orderRepositoryWrite;
     this.couponService = couponService;
     this.paymentGateway = paymentGateway;
     this.transactionRunner = transactionRunner;
+    this.orderEventPublisher = orderEventPublisher;
     this.clock = clock;
   }
 
@@ -98,6 +102,13 @@ export class OrderTransitionService implements IOrderTransitionService {
 
     if (shouldRefund && payment.transactionId) {
       await this.paymentGateway.refund(payment.transactionId);
+    }
+    this.orderEventPublisher.publishOrderStatusChanged(updated, order.status);
+    if (updated.payment.status !== order.payment.status) {
+      this.orderEventPublisher.publishOrderPaymentUpdated(updated);
+    }
+    if (to === EOrderStatus.PLACED) {
+      this.orderEventPublisher.publishOrderCreated(updated);
     }
     Logger.info('Order status changed', {
       eventName: 'order.status_changed',

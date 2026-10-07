@@ -1,4 +1,5 @@
 import { IClock } from '../../common/clock.interface';
+import { IStoreEventPublisher } from '../../store/events/store.event.publisher';
 import { IOptionGroupRepositoryRead } from '../repository/option-group.repository.read';
 import { IOptionGroupRepositoryWrite } from '../repository/option-group.repository.write';
 import { IOptionGroup } from './option-group.interface';
@@ -33,6 +34,7 @@ export interface IParamsOptionGroupService {
   optionGroupRepositoryRead: IOptionGroupRepositoryRead;
   optionGroupRepositoryWrite: IOptionGroupRepositoryWrite;
   optionGroupUsage: IOptionGroupUsage;
+  storeEventPublisher: IStoreEventPublisher;
   clock: IClock;
 }
 

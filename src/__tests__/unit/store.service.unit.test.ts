@@ -49,6 +49,11 @@ beforeEach(() => {
     storeRepositoryRead,
     storeRepositoryWrite,
     storageProvider,
+    storeEventPublisher: {
+      publishStoreStatusChanged: jest.fn(),
+      publishProductAvailabilityChanged: jest.fn(),
+      publishOptionAvailabilityChanged: jest.fn(),
+    },
     clock,
   });
 });
@@ -215,5 +220,18 @@ describe('When the owner uploads a store image', () => {
 
     expect(store.logoUrl).toBeDefined();
     expect(store.bannerUrl).toBeDefined();
+  });
+});
+
+describe('When the scheduler refreshes the store status (STO-R05)', () => {
+  it('should reset an expired forced status back to AUTO', async () => {
+    await storeService.setManualStatus(EManualStatus.FORCED_OPEN);
+    clock.advanceSeconds(3 * 3600);
+
+    const status = await storeService.refreshStoreStatus();
+
+    expect(status.manualStatus).toBe(EManualStatus.AUTO);
+    expect(stored?.manualStatus).toBe(EManualStatus.AUTO);
+    expect(stored?.manualStatusUntil).toBeUndefined();
   });
 });

@@ -4,6 +4,7 @@ import { OrderRepositoryRead } from '../../repository/order/order.repository.rea
 import { OrderRepositoryWrite } from '../../repository/order/order.repository.write';
 import { OrderTransitionServiceFactory } from './order-transition.service.factory';
 import { PaymentGatewayFactory } from './payment-gateway.factory';
+import { OrderEventPublisherFactory } from './order-event-publisher.factory';
 
 export class PaymentServiceFactory {
   static create() {
@@ -12,6 +13,7 @@ export class PaymentServiceFactory {
       orderRepositoryWrite: new OrderRepositoryWrite(),
       orderTransitionService: OrderTransitionServiceFactory.create(),
       paymentGateway: PaymentGatewayFactory.create(),
+      orderEventPublisher: OrderEventPublisherFactory.create(),
       clock: new SystemClock(),
     });
   }

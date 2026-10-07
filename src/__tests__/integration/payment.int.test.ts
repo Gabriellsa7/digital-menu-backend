@@ -1,5 +1,6 @@
 import { Morder } from '../../infrastructure/db/mongo/models/order.model';
 import { setupCheckout } from '../helpers/checkout.helper';
+import { loginCustomerWithOtp } from '../helpers/customer-session.helper';
 import { as } from '../helpers/http.helper';
 
 const CARD = { holder: 'NAMI', expiry: '12/30', cvv: '123' };
@@ -94,7 +95,7 @@ describe('When a customer pays with Pix', () => {
 
   it("should answer 404 for another customer's order (ORD-R18)", async () => {
     const orderId = await placeOrder('PIX');
-    const intruder = await setupCheckout();
+    const intruder = await loginCustomerWithOtp();
 
     const { statusCode } = await as(intruder.accessToken).post(
       `/me/orders/${orderId}/payment/pix/simulate`,

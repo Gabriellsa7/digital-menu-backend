@@ -1,6 +1,7 @@
 import { IClock } from '../../common/clock.interface';
 import { ITransactionRunner } from '../../common/transaction.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
+import { IOrderEventPublisher } from '../events/order.event.publisher';
 import { IPaymentGateway } from '../../payment/interfaces/payment.gateway.interface';
 import { IOrderRepositoryWrite } from '../repository/order.repository.write';
 import {
@@ -22,6 +23,7 @@ export interface IParamsOrderTransitionService {
   couponService: ICouponService;
   paymentGateway: IPaymentGateway;
   transactionRunner: ITransactionRunner;
+  orderEventPublisher: IOrderEventPublisher;
   clock: IClock;
 }
 

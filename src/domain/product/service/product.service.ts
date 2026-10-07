@@ -12,6 +12,7 @@ import {
 import { NotFoundError } from '../../errors/not-found.error';
 import { IOptionGroup } from '../../option-group/interfaces/option-group.interface';
 import { IOptionGroupService } from '../../option-group/interfaces/option-group.service.interface';
+import { IStoreEventPublisher } from '../../store/events/store.event.publisher';
 import { IProduct } from '../interfaces/product.interface';
 import {
   IParamsProductData,
@@ -38,6 +39,7 @@ export class ProductService implements IProductService {
   private categoryService: ICategoryService;
   private optionGroupService: IOptionGroupService;
   private storageProvider: IStorageProvider;
+  private storeEventPublisher: IStoreEventPublisher;
   private clock: IClock;
 
   constructor({
@@ -46,6 +48,7 @@ export class ProductService implements IProductService {
     categoryService,
     optionGroupService,
     storageProvider,
+    storeEventPublisher,
     clock,
   }: IParamsProductService) {
     this.productRepositoryRead = productRepositoryRead;
@@ -53,6 +56,7 @@ export class ProductService implements IProductService {
     this.categoryService = categoryService;
     this.optionGroupService = optionGroupService;
     this.storageProvider = storageProvider;
+    this.storeEventPublisher = storeEventPublisher;
     this.clock = clock;
   }
 
@@ -148,7 +152,11 @@ export class ProductService implements IProductService {
     id,
     isAvailable,
   }: IParamsSetProductAvailability): Promise<IProduct> {
-    return this.updateProductFields(id, { set: { isAvailable } });
+    const product = await this.updateProductFields(id, {
+      set: { isAvailable },
+    });
+    this.storeEventPublisher.publishProductAvailabilityChanged(id, isAvailable);
+    return product;
   }
 
   @ErrorHandler()
