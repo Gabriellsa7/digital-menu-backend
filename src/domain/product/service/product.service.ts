@@ -3,7 +3,12 @@ import { randomUUID } from 'crypto';
 import { ICategoryService } from '../../category/interfaces/category.service.interface';
 import { IClock } from '../../common/clock.interface';
 import { IPaginatedResult } from '../../common/pagination.interface';
+import { assertValidImage } from '../../common/image';
 import { assertCompleteOrder } from '../../common/reorder';
+import {
+  IImageFile,
+  IStorageProvider,
+} from '../../common/storage.provider.interface';
 import { NotFoundError } from '../../errors/not-found.error';
 import { IOptionGroup } from '../../option-group/interfaces/option-group.interface';
 import { IOptionGroupService } from '../../option-group/interfaces/option-group.service.interface';
@@ -25,11 +30,14 @@ import {
   IProductRepositoryWrite,
 } from '../repository/product.repository.write';
 
+const PRODUCT_IMAGES_FOLDER = 'digital-menu/products';
+
 export class ProductService implements IProductService {
   private productRepositoryRead: IProductRepositoryRead;
   private productRepositoryWrite: IProductRepositoryWrite;
   private categoryService: ICategoryService;
   private optionGroupService: IOptionGroupService;
+  private storageProvider: IStorageProvider;
   private clock: IClock;
 
   constructor({
@@ -37,12 +45,14 @@ export class ProductService implements IProductService {
     productRepositoryWrite,
     categoryService,
     optionGroupService,
+    storageProvider,
     clock,
   }: IParamsProductService) {
     this.productRepositoryRead = productRepositoryRead;
     this.productRepositoryWrite = productRepositoryWrite;
     this.categoryService = categoryService;
     this.optionGroupService = optionGroupService;
+    this.storageProvider = storageProvider;
     this.clock = clock;
   }
 
@@ -120,10 +130,12 @@ export class ProductService implements IProductService {
 
   @ErrorHandler()
   async deleteProduct(id: string): Promise<void> {
+    const product = await this.getProductById(id);
     const deleted = await this.productRepositoryWrite.deleteProductById(id);
     if (!deleted) {
       this.throwProductNotFound();
     }
+    await this.deleteImageIfAny(product.imagePublicId);
   }
 
   @ErrorHandler()
@@ -152,6 +164,38 @@ export class ProductService implements IProductService {
     );
 
     return this.productRepositoryRead.listProductsInCategory(categoryId);
+  }
+
+  @ErrorHandler()
+  async setProductImage(id: string, file?: IImageFile): Promise<IProduct> {
+    assertValidImage(file);
+    const product = await this.getProductById(id);
+    const uploaded = await this.storageProvider.uploadImage({
+      file,
+      folder: PRODUCT_IMAGES_FOLDER,
+    });
+
+    const updated = await this.updateProductFields(id, {
+      set: { imageUrl: uploaded.url, imagePublicId: uploaded.publicId },
+    });
+    await this.deleteImageIfAny(product.imagePublicId);
+    return updated;
+  }
+
+  @ErrorHandler()
+  async removeProductImage(id: string): Promise<IProduct> {
+    const product = await this.getProductById(id);
+    const updated = await this.updateProductFields(id, {
+      unset: ['imageUrl', 'imagePublicId'],
+    });
+    await this.deleteImageIfAny(product.imagePublicId);
+    return updated;
+  }
+
+  private async deleteImageIfAny(publicId?: string): Promise<void> {
+    if (publicId) {
+      await this.storageProvider.deleteImage(publicId);
+    }
   }
 
   private async assertValidProduct(product: Product): Promise<void> {

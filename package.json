@@ -37,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/luxon": "^3",
     "@types/mongodb-memory-server": "^2.3.0",
+    "@types/multer": "^2.3.0",
     "@types/node": "^24",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.16.0",
@@ -67,6 +68,7 @@
     "@opentelemetry/sdk-node": "^0.220.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
     "bcryptjs": "^3",
+    "cloudinary": "^2",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
     "express": "^4.19.2",
@@ -77,6 +79,7 @@
     "jsonwebtoken": "^9.0.3",
     "luxon": "^3",
     "mongoose": "^8.8.3",
+    "multer": "^2",
     "traceability": "^3.2.2"
   }
 }
