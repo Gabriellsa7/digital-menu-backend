@@ -1,8 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { IController } from './controller.interface';
 import { ITokenService } from '../../../domain/auth/interfaces/token.service.interface';
-import { IStoreService } from '../../../domain/store/interfaces/store.service.interface';
+import {
+  EStoreImageKind,
+  IStoreService,
+} from '../../../domain/store/interfaces/store.service.interface';
 import { createAuthGuards } from '../middlewares/auth-guards';
+import {
+  imageUpload,
+  uploadedImage,
+} from '../middlewares/image-upload.middleware';
 import { toStoreResponse } from '../presenters/store.presenter';
 
 export interface IParamsStoreController {
@@ -33,6 +40,12 @@ export class StoreController implements IController {
       this.setOpeningHours,
     );
     this.router.patch('/admin/store/status', ...staff, this.setManualStatus);
+    this.router.post(
+      '/admin/store/images/:kind',
+      ...owner,
+      imageUpload,
+      this.setImage,
+    );
   }
 
   getStore = async (
@@ -84,6 +97,22 @@ export class StoreController implements IController {
         req.body.manualStatus,
       );
       res.status(200).json(toStoreResponse(storeWithStatus));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  setImage = async (
+    req: Request<{ kind: EStoreImageKind }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      await this.storeService.setStoreImage(
+        req.params.kind,
+        uploadedImage(req),
+      );
+      await this.getStore(req, res, next);
     } catch (error) {
       next(error);
     }
