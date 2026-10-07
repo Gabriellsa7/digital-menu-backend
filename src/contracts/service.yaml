@@ -25,6 +25,8 @@ tags:
     description: Logged-in customer profile and addresses
   - name: Staff auth
     description: Store team login with e-mail and password, session refresh and logout
+  - name: Staff users
+    description: Store team profile and management (owner only)
 
 paths:
   /auth/customer/otp/request:
@@ -436,6 +438,187 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /admin/me:
+    get:
+      tags:
+        - Staff users
+      summary: Get the logged-in staff user
+      operationId: getStaffProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The staff user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/me/password:
+    patch:
+      tags:
+        - Staff users
+      summary: Change the own password
+      operationId: changeStaffPassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/staff-users:
+    get:
+      tags:
+        - Staff users
+      summary: List the team
+      operationId: listStaffUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Every staff user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Staff users
+      summary: Create a staff user
+      operationId: createStaffUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaffUserRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/staff-users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Staff users
+      summary: Update the name or role of a staff user
+      operationId: updateStaffUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStaffUserRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/staff-users/{id}/active:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags:
+        - Staff users
+      summary: Activate or deactivate a staff user
+      operationId: setStaffUserActive
+      description: Deactivating revokes every session of the user (STF-R05).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActiveRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -451,6 +634,14 @@ components:
       schema:
         type: string
       description: The ID of the address
+
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the resource
 
   responses:
     BadRequest:
@@ -777,6 +968,69 @@ components:
         createdAt:
           type: string
           format: date-time
+    Password:
+      type: string
+      minLength: 8
+      maxLength: 128
+      pattern: '^(?=.*[A-Za-z])(?=.*\d).+$'
+      description: At least 8 characters with 1 letter and 1 number (STF-R02)
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          $ref: '#/components/schemas/Password'
+    CreateStaffUserRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - email
+        - password
+        - role
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        password:
+          $ref: '#/components/schemas/Password'
+        role:
+          type: string
+          enum:
+            - OWNER
+            - STAFF
+    UpdateStaffUserRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        role:
+          type: string
+          enum:
+            - OWNER
+            - STAFF
+    SetActiveRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - isActive
+      properties:
+        isActive:
+          type: boolean
     Error:
       type: object
       required:
