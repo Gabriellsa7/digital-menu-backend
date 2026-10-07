@@ -8,7 +8,10 @@ import { ITransactionRunner } from '../../common/transaction.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
 import { ICustomerService } from '../../customer/interfaces/customer.service.interface';
 import { IPaymentService } from '../../payment/interfaces/payment.service.interface';
-import { IOrderRepositoryRead } from '../repository/order.repository.read';
+import {
+  IOrderRepositoryRead,
+  IParamsSearchOrders,
+} from '../repository/order.repository.read';
 import { IOrderTransitionService } from './order-transition.service.interface';
 import { IOrderRepositoryWrite } from '../repository/order.repository.write';
 import {
@@ -16,11 +19,24 @@ import {
   IOrderQuote,
   IParamsQuoteOrder,
 } from './order-pricing.service.interface';
-import { IOrder } from './order.interface';
+import { EOrderStatus, IOrder } from './order.interface';
 
 export interface IParamsCreateOrder extends IParamsQuoteOrder {
   notes?: string;
   idempotencyKey?: string;
+}
+
+export interface IParamsChangeOrderStatus {
+  orderId: string;
+  staffId: string;
+  status: EOrderStatus;
+  estimatedMinutes?: number;
+}
+
+export interface IParamsEndOrderByStaff {
+  orderId: string;
+  staffId: string;
+  reason: string;
 }
 
 export interface IParamsOrderService {
@@ -49,4 +65,10 @@ export interface IOrderService {
     customerId: string,
     reason?: string,
   ): Promise<IOrder>;
+  searchOrders(params: IParamsSearchOrders): Promise<IPaginatedResult<IOrder>>;
+  listActiveOrders(): Promise<IOrder[]>;
+  getOrderById(orderId: string): Promise<IOrder>;
+  changeOrderStatus(params: IParamsChangeOrderStatus): Promise<IOrder>;
+  rejectOrder(params: IParamsEndOrderByStaff): Promise<IOrder>;
+  cancelOrderByStaff(params: IParamsEndOrderByStaff): Promise<IOrder>;
 }
