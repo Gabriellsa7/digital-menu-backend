@@ -3,6 +3,7 @@ export interface IDeliveryZone {
   neighborhood: string;
   displayName: string;
   city: string;
+  cityKey: string;
   feeInCents: number;
   etaMinMinutes: number;
   etaMaxMinutes: number;
