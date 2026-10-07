@@ -11,6 +11,7 @@ import { StoreControllerFactory } from './infrastructure/config/factories/store.
 import { DeliveryZoneControllerFactory } from './infrastructure/config/factories/delivery-zone.controller.factory';
 import { CategoryControllerFactory } from './infrastructure/config/factories/category.controller.factory';
 import { OptionGroupControllerFactory } from './infrastructure/config/factories/option-group.controller.factory';
+import { ProductControllerFactory } from './infrastructure/config/factories/product.controller.factory';
 import { StaffAuthControllerFactory } from './infrastructure/config/factories/staff-auth.controller.factory';
 import { StaffUserServiceFactory } from './infrastructure/config/factories/staff-user.service.factory';
 import { ensureOwner } from './infrastructure/bootstrap/ensure-owner';
@@ -33,6 +34,7 @@ const app = new Server({
     DeliveryZoneControllerFactory.create(),
     CategoryControllerFactory.create(),
     OptionGroupControllerFactory.create(),
+    ProductControllerFactory.create(),
   ],
   databaseURI: env.databaseUri,
   apiSpecLocation: OPEN_API_SPEC_FILE_LOCATION,
