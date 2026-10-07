@@ -1,4 +1,5 @@
 import { IClock } from '../../common/clock.interface';
+import { TTransactionContext } from '../../common/transaction.interface';
 import { EFulfillmentType } from '../../order/interfaces/order.interface';
 import { ICouponRepositoryRead } from '../repository/coupon.repository.read';
 import { ICouponRepositoryWrite } from '../repository/coupon.repository.write';
@@ -52,6 +53,12 @@ export interface ICouponService {
   validateCouponForCustomer(
     params: IParamsValidateCoupon,
   ): Promise<ICouponValidation>;
-  reserveCouponUse(couponId: string): Promise<void>;
-  releaseCouponUse(couponId: string): Promise<void>;
+  reserveCouponUse(
+    couponId: string,
+    context?: TTransactionContext,
+  ): Promise<void>;
+  releaseCouponUse(
+    couponId: string,
+    context?: TTransactionContext,
+  ): Promise<void>;
 }
