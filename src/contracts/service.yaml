@@ -29,6 +29,8 @@ tags:
     description: Store team profile and management (owner only)
   - name: Store
     description: Store settings, opening hours and open/closed status
+  - name: Delivery zones
+    description: Neighborhoods served by the store, with fee and ETA
 
 paths:
   /auth/customer/otp/request:
@@ -752,6 +754,172 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /public/delivery-zones:
+    get:
+      tags:
+        - Delivery zones
+      summary: List the active delivery zones
+      operationId: listPublicDeliveryZones
+      responses:
+        '200':
+          description: Active zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicDeliveryZone'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /public/delivery-zones/resolve:
+    get:
+      tags:
+        - Delivery zones
+      summary: Find the zone that serves a neighborhood
+      operationId: resolveDeliveryZone
+      description: Matching ignores accents, casing and extra spaces (CUS-R03).
+      parameters:
+        - name: neighborhood
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 80
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 80
+      responses:
+        '200':
+          description: The matched zone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicDeliveryZone'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/delivery-zones:
+    get:
+      tags:
+        - Delivery zones
+      summary: List every delivery zone
+      operationId: listDeliveryZones
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Every zone
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryZone'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Delivery zones
+      summary: Create a delivery zone (owner)
+      operationId: createDeliveryZone
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryZoneRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryZone'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/delivery-zones/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Delivery zones
+      summary: Update a delivery zone (owner)
+      operationId: updateDeliveryZone
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryZoneRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryZone'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Delivery zones
+      summary: Delete a delivery zone (owner)
+      operationId: deleteDeliveryZone
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1339,6 +1507,77 @@ components:
       properties:
         manualStatus:
           $ref: '#/components/schemas/ManualStatus'
+    PublicDeliveryZone:
+      type: object
+      required:
+        - id
+        - name
+        - city
+        - feeInCents
+        - etaMinMinutes
+        - etaMaxMinutes
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Vila Mariana
+        city:
+          type: string
+          example: São Paulo
+        feeInCents:
+          type: integer
+          example: 590
+        etaMinMinutes:
+          type: integer
+          example: 30
+        etaMaxMinutes:
+          type: integer
+          example: 45
+    DeliveryZone:
+      allOf:
+        - $ref: '#/components/schemas/PublicDeliveryZone'
+        - type: object
+          required:
+            - isActive
+            - createdAt
+          properties:
+            isActive:
+              type: boolean
+            createdAt:
+              type: string
+              format: date-time
+    DeliveryZoneRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - city
+        - feeInCents
+        - etaMinMinutes
+        - etaMaxMinutes
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        feeInCents:
+          type: integer
+          minimum: 0
+        etaMinMinutes:
+          type: integer
+          minimum: 1
+          maximum: 240
+        etaMaxMinutes:
+          type: integer
+          minimum: 1
+          maximum: 240
+        isActive:
+          type: boolean
     Error:
       type: object
       required:

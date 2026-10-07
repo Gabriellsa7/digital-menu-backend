@@ -1,5 +1,6 @@
 import supertest from 'supertest';
 import { app } from '../../../jest/setup-integration-tests';
+import { MdeliveryZone } from '../../infrastructure/db/mongo/models/delivery-zone.model';
 import { loginCustomerWithOtp } from '../helpers/customer-session.helper';
 
 const AN_ADDRESS = {
@@ -24,6 +25,10 @@ async function addAddress(overrides: Record<string, unknown> = {}) {
     ...overrides,
   });
 }
+
+beforeAll(async () => {
+  await MdeliveryZone.deleteMany({});
+});
 
 beforeEach(async () => {
   ({ accessToken } = await loginCustomerWithOtp());
