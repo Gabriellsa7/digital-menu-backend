@@ -1,4 +1,5 @@
 import { UpdateQuery } from 'mongoose';
+import { TTransactionContext } from '../../../domain/common/transaction.interface';
 import { ICoupon } from '../../../domain/coupon/interfaces/coupon.interface';
 import {
   ICouponRepositoryWrite,
@@ -7,6 +8,7 @@ import {
 import { Mcoupon } from '../../db/mongo/models/coupon.model';
 import { HIDE_MONGO_INTERNAL_FIELDS } from '../../db/mongo/mongo.projection';
 import { IMCoupon } from '../../db/mongo/schema/coupon.schema';
+import { toSession } from '../../db/mongo/transaction';
 
 export class CouponRepositoryWrite implements ICouponRepositoryWrite {
   async createCoupon(coupon: ICoupon): Promise<ICoupon> {
@@ -32,7 +34,10 @@ export class CouponRepositoryWrite implements ICouponRepositoryWrite {
     }).lean<ICoupon>();
   }
 
-  async incrementCouponUsage(id: string): Promise<boolean> {
+  async incrementCouponUsage(
+    id: string,
+    context?: TTransactionContext,
+  ): Promise<boolean> {
     const { modifiedCount } = await Mcoupon.updateOne(
       {
         id,
@@ -42,14 +47,19 @@ export class CouponRepositoryWrite implements ICouponRepositoryWrite {
         ],
       },
       { $inc: { usedCount: 1 } },
+      { session: toSession(context) },
     );
     return modifiedCount === 1;
   }
 
-  async decrementCouponUsage(id: string): Promise<void> {
+  async decrementCouponUsage(
+    id: string,
+    context?: TTransactionContext,
+  ): Promise<void> {
     await Mcoupon.updateOne(
       { id, usedCount: { $gt: 0 } },
       { $inc: { usedCount: -1 } },
+      { session: toSession(context) },
     );
   }
 }

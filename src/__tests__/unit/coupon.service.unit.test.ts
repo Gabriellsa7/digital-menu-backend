@@ -162,6 +162,7 @@ describe('When an order reserves a coupon use (CPN-R09)', () => {
 
     expect(couponRepositoryWrite.decrementCouponUsage).toHaveBeenCalledWith(
       'coupon-1',
+      undefined,
     );
   });
 });

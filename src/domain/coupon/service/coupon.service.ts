@@ -1,6 +1,7 @@
 import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
 import { randomUUID } from 'crypto';
 import { IClock } from '../../common/clock.interface';
+import { TTransactionContext } from '../../common/transaction.interface';
 import { BusinessRuleError } from '../../errors/business-rule.error';
 import { ConflictError } from '../../errors/conflict.error';
 import { NotFoundError } from '../../errors/not-found.error';
@@ -148,17 +149,25 @@ export class CouponService implements ICouponService {
   }
 
   @ErrorHandler()
-  async reserveCouponUse(couponId: string): Promise<void> {
-    const reserved =
-      await this.couponRepositoryWrite.incrementCouponUsage(couponId);
+  async reserveCouponUse(
+    couponId: string,
+    context?: TTransactionContext,
+  ): Promise<void> {
+    const reserved = await this.couponRepositoryWrite.incrementCouponUsage(
+      couponId,
+      context,
+    );
     if (!reserved) {
       throw new BusinessRuleError('Coupon is exhausted', 'COUPON_EXHAUSTED');
     }
   }
 
   @ErrorHandler()
-  async releaseCouponUse(couponId: string): Promise<void> {
-    await this.couponRepositoryWrite.decrementCouponUsage(couponId);
+  async releaseCouponUse(
+    couponId: string,
+    context?: TTransactionContext,
+  ): Promise<void> {
+    await this.couponRepositoryWrite.decrementCouponUsage(couponId, context);
   }
 
   private async assertUniqueCode(coupon: ICoupon): Promise<void> {
