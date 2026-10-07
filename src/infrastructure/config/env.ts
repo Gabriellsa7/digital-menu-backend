@@ -11,10 +11,15 @@ const DEFAULT_STAFF_REFRESH_TTL_DAYS = 7;
 const DEFAULT_CUSTOMER_REFRESH_TTL_DAYS = 30;
 const DEFAULT_BCRYPT_ROUNDS = 10;
 const DEFAULT_AUTH_RATE_LIMIT_MAX = 20;
+const DEFAULT_CORS_ORIGINS = 'http://localhost:3000,http://localhost:5173';
 
 export const env = {
   port: Number(process.env.PORT) || 3000,
   databaseUri: requireEnv('DATABASE_URI'),
+  corsOrigins: (process.env.CORS_ORIGINS || DEFAULT_CORS_ORIGINS)
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   isProduction: process.env.NODE_ENV === 'production',
   jwtAccessSecret: requireEnv('JWT_ACCESS_SECRET'),
   accessTokenTtlSeconds:

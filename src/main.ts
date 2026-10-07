@@ -20,6 +20,9 @@ import { StaffAuthControllerFactory } from './infrastructure/config/factories/st
 import { StaffUserServiceFactory } from './infrastructure/config/factories/staff-user.service.factory';
 import { ensureOwner } from './infrastructure/bootstrap/ensure-owner';
 import { TickRunnerFactory } from './infrastructure/config/factories/tick-runner.factory';
+import { TokenServiceFactory } from './infrastructure/config/factories/token.service.factory';
+import { createSocketServer } from './infrastructure/realtime/socket.server';
+import { socketEmitter } from './infrastructure/realtime/socket.emitter';
 
 const OPEN_API_SPEC_FILE_LOCATION = path.resolve(
   __dirname,
@@ -58,6 +61,12 @@ async function start() {
     password: env.bootstrapOwnerPassword,
   });
   const httpServer = app.listen();
+  const io = createSocketServer({
+    httpServer,
+    tokenService: TokenServiceFactory.create(),
+    corsOrigins: env.corsOrigins,
+  });
+  socketEmitter.attach(io);
   const tickRunner = TickRunnerFactory.create();
   tickRunner.start();
 
@@ -67,7 +76,8 @@ async function start() {
       process: 'Application',
     });
     tickRunner.stop();
-    httpServer.close(async () => {
+    socketEmitter.detach();
+    void io.close(async () => {
       await app.closeDatabase();
       process.exit(0);
     });
