@@ -1,6 +1,7 @@
 import { EOrderStatus } from '../../domain/order/interfaces/order.interface';
 import { Morder } from '../../infrastructure/db/mongo/models/order.model';
 import { setupCheckout } from '../helpers/checkout.helper';
+import { loginCustomerWithOtp } from '../helpers/customer-session.helper';
 import { as } from '../helpers/http.helper';
 
 let checkout: Awaited<ReturnType<typeof setupCheckout>>;
@@ -43,7 +44,7 @@ describe('When a customer reads the order history', () => {
 
   it("should answer 404 for another customer's order (ORD-R18)", async () => {
     const orderId = await placeOrder();
-    const intruder = await setupCheckout();
+    const intruder = await loginCustomerWithOtp();
 
     const { statusCode } = await as(intruder.accessToken).get(
       `/me/orders/${orderId}`,
