@@ -1838,6 +1838,71 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /me/orders/{orderId}/payment/card:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags:
+        - Customer orders
+      summary: Pay an order with a card (simulated)
+      operationId: payOrderWithCard
+      description: '4242 4242 4242 4242 is approved, 4000 0000 0000 0002 is declined and any other number is invalid. After 3 failures the order is canceled (PAY-R03, R05). Only brand and last 4 digits are stored.'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardPaymentRequest'
+      responses:
+        '200':
+          description: Approved; the order is placed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders/{orderId}/payment/pix/simulate:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags:
+        - Customer orders
+      summary: Approve the Pix payment (demo)
+      operationId: simulatePixPayment
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Approved; the order is placed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1877,6 +1942,14 @@ components:
         minimum: 1
         maximum: 100
         default: 20
+
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the order
 
   responses:
     BadRequest:
@@ -3289,6 +3362,29 @@ components:
             createdAt:
               type: string
               format: date-time
+    CardPaymentRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - number
+        - holder
+        - expiry
+        - cvv
+      properties:
+        number:
+          type: string
+          pattern: '^[0-9 ]{12,23}$'
+        holder:
+          type: string
+          minLength: 2
+          maxLength: 60
+        expiry:
+          type: string
+          pattern: '^(0[1-9]|1[0-2])/\d{2}$'
+          example: '12/30'
+        cvv:
+          type: string
+          pattern: '^\d{3,4}$'
     Error:
       type: object
       required:

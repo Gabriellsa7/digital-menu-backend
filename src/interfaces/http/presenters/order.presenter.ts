@@ -2,6 +2,7 @@ import {
   IOrder,
   IOrderItem,
 } from '../../../domain/order/interfaces/order.interface';
+import { IPayment } from '../../../domain/payment/interfaces/payment.interface';
 import { IOrderQuote } from '../../../domain/order/interfaces/order-pricing.service.interface';
 
 function toOrderItemResponse(item: IOrderItem): IOrderItem {
@@ -28,10 +29,19 @@ export function toOrderQuoteResponse(quote: IOrderQuote) {
   return { ...quote, items: quote.items.map(toOrderItemResponse) };
 }
 
+function toPaymentResponse({ pix, paidAt, ...payment }: IPayment) {
+  return {
+    ...payment,
+    ...(pix && { pix: { ...pix, expiresAt: pix.expiresAt.toISOString() } }),
+    ...(paidAt && { paidAt: paidAt.toISOString() }),
+  };
+}
+
 export function toOrderResponse(order: IOrder) {
   const { idempotencyKey, updatedAt, ...response } = order;
   return {
     ...response,
+    payment: toPaymentResponse(order.payment),
     items: order.items.map(toOrderItemResponse),
     statusHistory: order.statusHistory.map(({ status, at, by, reason }) => ({
       status,
