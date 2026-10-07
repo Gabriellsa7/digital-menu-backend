@@ -35,6 +35,7 @@ export const env = {
   bootstrapOwnerName: process.env.BOOTSTRAP_OWNER_NAME || 'Owner',
   bootstrapOwnerEmail: process.env.BOOTSTRAP_OWNER_EMAIL || undefined,
   bootstrapOwnerPassword: process.env.BOOTSTRAP_OWNER_PASSWORD || undefined,
+  pixAutoApproveSeconds: Number(process.env.PIX_AUTO_APPROVE_SECONDS) || 0,
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || undefined,
     apiKey: process.env.CLOUDINARY_API_KEY || undefined,

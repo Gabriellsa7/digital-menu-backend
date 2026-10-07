@@ -18,6 +18,7 @@ import { CustomerOrderControllerFactory } from './infrastructure/config/factorie
 import { StaffAuthControllerFactory } from './infrastructure/config/factories/staff-auth.controller.factory';
 import { StaffUserServiceFactory } from './infrastructure/config/factories/staff-user.service.factory';
 import { ensureOwner } from './infrastructure/bootstrap/ensure-owner';
+import { TickRunnerFactory } from './infrastructure/config/factories/tick-runner.factory';
 
 const OPEN_API_SPEC_FILE_LOCATION = path.resolve(
   __dirname,
@@ -55,12 +56,15 @@ async function start() {
     password: env.bootstrapOwnerPassword,
   });
   const httpServer = app.listen();
+  const tickRunner = TickRunnerFactory.create();
+  tickRunner.start();
 
   const shutdown = (signal: string) => {
     Logger.info(`Received ${signal}, shutting down gracefully`, {
       eventName: 'app.shutdown',
       process: 'Application',
     });
+    tickRunner.stop();
     httpServer.close(async () => {
       await app.closeDatabase();
       process.exit(0);
