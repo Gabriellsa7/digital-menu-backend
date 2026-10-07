@@ -9,6 +9,7 @@ function requireEnv(name: string): string {
 const DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 900;
 const DEFAULT_STAFF_REFRESH_TTL_DAYS = 7;
 const DEFAULT_CUSTOMER_REFRESH_TTL_DAYS = 30;
+const DEFAULT_BCRYPT_ROUNDS = 10;
 
 export const env = {
   port: Number(process.env.PORT) || 3000,
@@ -28,4 +29,5 @@ export const env = {
   otpPepper: requireEnv('OTP_PEPPER'),
   otpExposeCode: process.env.OTP_EXPOSE_CODE === 'true',
   googleClientId: requireEnv('GOOGLE_CLIENT_ID'),
+  bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || DEFAULT_BCRYPT_ROUNDS,
 };
