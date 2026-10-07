@@ -7,6 +7,8 @@ import {
   IStore,
 } from '../../domain/store/interfaces/store.interface';
 import { Store } from '../../domain/store/store.entity';
+import { EStoreImageKind } from '../../domain/store/interfaces/store.service.interface';
+import { InMemoryStorageProvider } from '../../infrastructure/storage/in-memory.storage.provider';
 import { FixedClock } from '../helpers/fixed.clock';
 
 const THURSDAY_NINE_AM = '2026-10-01T12:00:00.000Z';
@@ -18,6 +20,7 @@ let clock: FixedClock;
 let stored: IStore | null;
 let storeRepositoryRead: jest.Mocked<IStoreRepositoryRead>;
 let storeRepositoryWrite: jest.Mocked<IStoreRepositoryWrite>;
+let storageProvider: InMemoryStorageProvider;
 let storeService: StoreService;
 
 function aStore(overrides: Partial<IStore> = {}): IStore {
@@ -41,9 +44,11 @@ beforeEach(() => {
       return stored;
     }),
   };
+  storageProvider = new InMemoryStorageProvider();
   storeService = new StoreService({
     storeRepositoryRead,
     storeRepositoryWrite,
+    storageProvider,
     clock,
   });
 });
@@ -178,5 +183,37 @@ describe('When the owner updates the store', () => {
         { weekday: EWeekday.MONDAY, opensAt: '12:00', closesAt: '18:00' },
       ]),
     ).rejects.toMatchObject({ code: 'OVERLAPPING_HOURS' });
+  });
+});
+
+describe('When the owner uploads a store image', () => {
+  const IMAGE = {
+    buffer: Buffer.from('logo'),
+    mimeType: 'image/webp',
+    size: 2048,
+  };
+
+  it('should replace the logo and delete the previous asset', async () => {
+    const first = await storeService.setStoreImage(EStoreImageKind.LOGO, IMAGE);
+    const second = await storeService.setStoreImage(
+      EStoreImageKind.LOGO,
+      IMAGE,
+    );
+
+    expect(second.logoUrl).toEqual(expect.any(String));
+    expect(storageProvider.images.has(first.logoPublicId!)).toBe(false);
+    expect(storageProvider.images.has(second.logoPublicId!)).toBe(true);
+  });
+
+  it('should keep the logo when the banner changes', async () => {
+    await storeService.setStoreImage(EStoreImageKind.LOGO, IMAGE);
+
+    const store = await storeService.setStoreImage(
+      EStoreImageKind.BANNER,
+      IMAGE,
+    );
+
+    expect(store.logoUrl).toBeDefined();
+    expect(store.bannerUrl).toBeDefined();
   });
 });

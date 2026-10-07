@@ -1,6 +1,10 @@
 import { ICategoryService } from '../../category/interfaces/category.service.interface';
 import { IClock } from '../../common/clock.interface';
 import { IPaginatedResult } from '../../common/pagination.interface';
+import {
+  IImageFile,
+  IStorageProvider,
+} from '../../common/storage.provider.interface';
 import { IOptionGroupService } from '../../option-group/interfaces/option-group.service.interface';
 import {
   IParamsListProducts,
@@ -34,6 +38,7 @@ export interface IParamsProductService {
   productRepositoryWrite: IProductRepositoryWrite;
   categoryService: ICategoryService;
   optionGroupService: IOptionGroupService;
+  storageProvider: IStorageProvider;
   clock: IClock;
 }
 
@@ -51,4 +56,6 @@ export interface IProductService {
     categoryId: string,
     orderedIds: string[],
   ): Promise<IProduct[]>;
+  setProductImage(id: string, file?: IImageFile): Promise<IProduct>;
+  removeProductImage(id: string): Promise<IProduct>;
 }

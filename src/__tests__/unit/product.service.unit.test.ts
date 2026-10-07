@@ -6,6 +6,7 @@ import { ICategoryService } from '../../domain/category/interfaces/category.serv
 import { IOptionGroupService } from '../../domain/option-group/interfaces/option-group.service.interface';
 import { IOptionGroup } from '../../domain/option-group/interfaces/option-group.interface';
 import { NotFoundError } from '../../domain/errors/not-found.error';
+import { InMemoryStorageProvider } from '../../infrastructure/storage/in-memory.storage.provider';
 import { FixedClock } from '../helpers/fixed.clock';
 
 const clock = new FixedClock();
@@ -49,6 +50,7 @@ let categoryService: jest.Mocked<Pick<ICategoryService, 'getCategoryById'>>;
 let optionGroupService: jest.Mocked<
   Pick<IOptionGroupService, 'findOptionGroupsByIds'>
 >;
+let storageProvider: InMemoryStorageProvider;
 let productService: ProductService;
 
 beforeEach(() => {
@@ -75,11 +77,13 @@ beforeEach(() => {
       ids.map((id) => aGroup(id)),
     ),
   };
+  storageProvider = new InMemoryStorageProvider();
   productService = new ProductService({
     productRepositoryRead,
     productRepositoryWrite,
     categoryService: categoryService as unknown as ICategoryService,
     optionGroupService: optionGroupService as unknown as IOptionGroupService,
+    storageProvider,
     clock,
   });
 });
@@ -184,7 +188,7 @@ describe('When we change the availability or delete a product', () => {
   });
 
   it('should throw NotFoundError when deleting an unknown product', async () => {
-    productRepositoryWrite.deleteProductById.mockResolvedValue(false);
+    productRepositoryRead.findProductById.mockResolvedValue(null);
 
     await expect(productService.deleteProduct('missing')).rejects.toThrow(
       NotFoundError,
@@ -206,5 +210,71 @@ describe('When we reorder products in a category', () => {
     expect(
       productRepositoryWrite.reorderProductsInCategory,
     ).toHaveBeenCalledWith('burgers', ['b', 'a']);
+  });
+});
+
+describe('When we change the product image (PRD-R03, R04)', () => {
+  const IMAGE = {
+    buffer: Buffer.from('image'),
+    mimeType: 'image/png',
+    size: 1024,
+  };
+
+  it('should upload the new image and delete the previous asset', async () => {
+    const previous = await storageProvider.uploadImage({
+      file: IMAGE,
+      folder: 'digital-menu/products',
+    });
+    productRepositoryRead.findProductById.mockResolvedValue(
+      aProduct({ imageUrl: previous.url, imagePublicId: previous.publicId }),
+    );
+
+    const product = await productService.setProductImage('product-1', IMAGE);
+
+    expect(product.imagePublicId).not.toBe(previous.publicId);
+    expect(storageProvider.images.has(previous.publicId)).toBe(false);
+    expect(storageProvider.images.has(product.imagePublicId!)).toBe(true);
+  });
+
+  it.each([
+    ['a missing file', undefined, 'IMAGE_REQUIRED'],
+    ['a GIF', { ...IMAGE, mimeType: 'image/gif' }, 'INVALID_IMAGE_TYPE'],
+    ['a 4 MB file', { ...IMAGE, size: 4 * 1024 * 1024 }, 'IMAGE_TOO_LARGE'],
+  ])('should reject %s', async (_case, file, code) => {
+    await expect(
+      productService.setProductImage('product-1', file),
+    ).rejects.toMatchObject({ code });
+  });
+
+  it('should delete the asset when the image is removed', async () => {
+    const previous = await storageProvider.uploadImage({
+      file: IMAGE,
+      folder: 'digital-menu/products',
+    });
+    productRepositoryRead.findProductById.mockResolvedValue(
+      aProduct({ imagePublicId: previous.publicId }),
+    );
+
+    await productService.removeProductImage('product-1');
+
+    expect(storageProvider.images.size).toBe(0);
+    expect(productRepositoryWrite.updateProductById).toHaveBeenCalledWith(
+      'product-1',
+      { unset: ['imageUrl', 'imagePublicId'] },
+    );
+  });
+
+  it('should delete the asset together with the product', async () => {
+    const previous = await storageProvider.uploadImage({
+      file: IMAGE,
+      folder: 'digital-menu/products',
+    });
+    productRepositoryRead.findProductById.mockResolvedValue(
+      aProduct({ imagePublicId: previous.publicId }),
+    );
+
+    await productService.deleteProduct('product-1');
+
+    expect(storageProvider.images.size).toBe(0);
   });
 });

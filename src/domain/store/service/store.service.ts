@@ -3,6 +3,11 @@ import { randomUUID } from 'crypto';
 import { DateTime } from 'luxon';
 import { Logger } from 'traceability';
 import { IClock } from '../../common/clock.interface';
+import { assertValidImage } from '../../common/image';
+import {
+  IImageFile,
+  IStorageProvider,
+} from '../../common/storage.provider.interface';
 import { BusinessRuleError } from '../../errors/business-rule.error';
 import { NotFoundError } from '../../errors/not-found.error';
 import {
@@ -11,6 +16,7 @@ import {
   IStore,
 } from '../interfaces/store.interface';
 import {
+  EStoreImageKind,
   IParamsStoreService,
   IParamsUpdateStore,
   IStoreService,
@@ -27,18 +33,23 @@ import {
 } from '../repository/store.repository.write';
 import { Store } from '../store.entity';
 
+const STORE_IMAGES_FOLDER = 'digital-menu/store';
+
 export class StoreService implements IStoreService {
   private storeRepositoryRead: IStoreRepositoryRead;
   private storeRepositoryWrite: IStoreRepositoryWrite;
+  private storageProvider: IStorageProvider;
   private clock: IClock;
 
   constructor({
     storeRepositoryRead,
     storeRepositoryWrite,
+    storageProvider,
     clock,
   }: IParamsStoreService) {
     this.storeRepositoryRead = storeRepositoryRead;
     this.storeRepositoryWrite = storeRepositoryWrite;
+    this.storageProvider = storageProvider;
     this.clock = clock;
   }
 
@@ -123,6 +134,32 @@ export class StoreService implements IStoreService {
       });
     }
     return store;
+  }
+
+  @ErrorHandler()
+  async setStoreImage(
+    kind: EStoreImageKind,
+    file?: IImageFile,
+  ): Promise<IStore> {
+    assertValidImage(file);
+    const store = await this.getStore();
+    const uploaded = await this.storageProvider.uploadImage({
+      file,
+      folder: STORE_IMAGES_FOLDER,
+    });
+    const previousPublicId =
+      kind === EStoreImageKind.LOGO ? store.logoPublicId : store.bannerPublicId;
+
+    const updated = await this.updateStoreFields({
+      set:
+        kind === EStoreImageKind.LOGO
+          ? { logoUrl: uploaded.url, logoPublicId: uploaded.publicId }
+          : { bannerUrl: uploaded.url, bannerPublicId: uploaded.publicId },
+    });
+    if (previousPublicId) {
+      await this.storageProvider.deleteImage(previousPublicId);
+    }
+    return updated;
   }
 
   private assertValidTimezone(timezone: string): void {

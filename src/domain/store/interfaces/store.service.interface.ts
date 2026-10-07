@@ -1,5 +1,9 @@
 import { IClock } from '../../common/clock.interface';
 import { IPostalAddress } from '../../common/postal-address.interface';
+import {
+  IImageFile,
+  IStorageProvider,
+} from '../../common/storage.provider.interface';
 import { IStoreRepositoryRead } from '../repository/store.repository.read';
 import { IStoreRepositoryWrite } from '../repository/store.repository.write';
 import {
@@ -8,6 +12,11 @@ import {
   IStore,
   IStoreStatus,
 } from './store.interface';
+
+export enum EStoreImageKind {
+  LOGO = 'logo',
+  BANNER = 'banner',
+}
 
 export interface IParamsUpdateStore {
   name?: string;
@@ -30,6 +39,7 @@ export interface IStoreWithStatus {
 export interface IParamsStoreService {
   storeRepositoryRead: IStoreRepositoryRead;
   storeRepositoryWrite: IStoreRepositoryWrite;
+  storageProvider: IStorageProvider;
   clock: IClock;
 }
 
@@ -40,4 +50,5 @@ export interface IStoreService {
   setOpeningHours(openingHours: IOpeningHour[]): Promise<IStore>;
   setManualStatus(manualStatus: EManualStatus): Promise<IStoreWithStatus>;
   assertAcceptingOrders(): Promise<IStore>;
+  setStoreImage(kind: EStoreImageKind, file?: IImageFile): Promise<IStore>;
 }
