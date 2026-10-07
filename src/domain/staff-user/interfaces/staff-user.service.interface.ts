@@ -29,6 +29,11 @@ export interface IParamsChangeStaffUserPassword {
   newPassword: string;
 }
 
+export interface IParamsVerifyStaffUserCredentials {
+  email: string;
+  password: string;
+}
+
 export interface IParamsStaffUserService {
   staffUserRepositoryRead: IStaffUserRepositoryRead;
   staffUserRepositoryWrite: IStaffUserRepositoryWrite;
@@ -46,4 +51,8 @@ export interface IStaffUserService {
   changeStaffUserPassword(
     params: IParamsChangeStaffUserPassword,
   ): Promise<void>;
+  verifyStaffUserCredentials(
+    params: IParamsVerifyStaffUserCredentials,
+  ): Promise<IStaffUser>;
+  hasOwner(): Promise<boolean>;
 }
