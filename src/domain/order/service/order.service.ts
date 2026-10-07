@@ -3,9 +3,14 @@ import { randomUUID } from 'crypto';
 import { Logger } from 'traceability';
 import { IClock } from '../../common/clock.interface';
 import { ICounterRepository } from '../../common/counter.repository';
+import {
+  IPaginatedResult,
+  IPagination,
+} from '../../common/pagination.interface';
 import { ITransactionRunner } from '../../common/transaction.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
 import { ICustomerService } from '../../customer/interfaces/customer.service.interface';
+import { NotFoundError } from '../../errors/not-found.error';
 import { isPaidOnDelivery } from '../../payment/initial-payment';
 import { IPaymentService } from '../../payment/interfaces/payment.service.interface';
 import {
@@ -13,6 +18,7 @@ import {
   IOrderQuote,
   IParamsQuoteOrder,
 } from '../interfaces/order-pricing.service.interface';
+import { IOrderTransitionService } from '../interfaces/order-transition.service.interface';
 import {
   EOrderActorType,
   EOrderStatus,
@@ -38,6 +44,7 @@ export class OrderService implements IOrderService {
   private customerService: ICustomerService;
   private couponService: ICouponService;
   private paymentService: IPaymentService;
+  private orderTransitionService: IOrderTransitionService;
   private clock: IClock;
 
   constructor({
@@ -49,6 +56,7 @@ export class OrderService implements IOrderService {
     customerService,
     couponService,
     paymentService,
+    orderTransitionService,
     clock,
   }: IParamsOrderService) {
     this.orderRepositoryRead = orderRepositoryRead;
@@ -59,6 +67,7 @@ export class OrderService implements IOrderService {
     this.customerService = customerService;
     this.couponService = couponService;
     this.paymentService = paymentService;
+    this.orderTransitionService = orderTransitionService;
     this.clock = clock;
   }
 
@@ -138,5 +147,44 @@ export class OrderService implements IOrderService {
       totalInCents: order.totalInCents,
     });
     return order;
+  }
+
+  @ErrorHandler()
+  async listOrdersForCustomer(
+    customerId: string,
+    pagination: IPagination,
+  ): Promise<IPaginatedResult<IOrder>> {
+    return this.orderRepositoryRead.listOrdersByCustomer(customerId, pagination);
+  }
+
+  @ErrorHandler()
+  async getOrderForCustomer(
+    orderId: string,
+    customerId: string,
+  ): Promise<IOrder> {
+    const order = await this.orderRepositoryRead.findOrderById(orderId);
+
+    return order && order.customerId === customerId
+      ? order
+      : this.throwOrderNotFound();
+  }
+
+  @ErrorHandler()
+  async cancelOrderByCustomer(
+    orderId: string,
+    customerId: string,
+    reason?: string,
+  ): Promise<IOrder> {
+    const order = await this.getOrderForCustomer(orderId, customerId);
+    return this.orderTransitionService.transitionOrder({
+      order,
+      to: EOrderStatus.CANCELED,
+      actor: { type: EOrderActorType.CUSTOMER, id: customerId },
+      reason: reason ?? 'Canceled by the customer',
+    });
+  }
+
+  private throwOrderNotFound(): never {
+    throw new NotFoundError('Order not found');
   }
 }

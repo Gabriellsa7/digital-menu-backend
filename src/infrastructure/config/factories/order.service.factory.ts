@@ -7,6 +7,7 @@ import { OrderRepositoryWrite } from '../../repository/order/order.repository.wr
 import { CouponServiceFactory } from './coupon.service.factory';
 import { CustomerServiceFactory } from './customer.service.factory';
 import { OrderPricingServiceFactory } from './order-pricing.service.factory';
+import { OrderTransitionServiceFactory } from './order-transition.service.factory';
 import { PaymentServiceFactory } from './payment.service.factory';
 
 export class OrderServiceFactory {
@@ -20,6 +21,7 @@ export class OrderServiceFactory {
       customerService: CustomerServiceFactory.create(),
       couponService: CouponServiceFactory.create(),
       paymentService: PaymentServiceFactory.create(),
+      orderTransitionService: OrderTransitionServiceFactory.create(),
       clock: new SystemClock(),
     });
   }

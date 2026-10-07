@@ -16,6 +16,8 @@ import {
   EPaymentStatus,
 } from '../../domain/payment/interfaces/payment.interface';
 import { BusinessRuleError } from '../../domain/errors/business-rule.error';
+import { IOrderTransitionService } from '../../domain/order/interfaces/order-transition.service.interface';
+import { NotFoundError } from '../../domain/errors/not-found.error';
 import { IPaymentService } from '../../domain/payment/interfaces/payment.service.interface';
 import { buildInitialPayment } from '../../domain/payment/initial-payment';
 import { aCustomerFixture } from '../helpers/catalog.fixtures';
@@ -47,8 +49,9 @@ function aCreateParams(
 }
 
 let orderRepositoryRead: jest.Mocked<
-  Pick<IOrderRepositoryRead, 'findOrderByIdempotencyKey'>
+  Pick<IOrderRepositoryRead, 'findOrderByIdempotencyKey' | 'findOrderById'>
 >;
+let orderTransitionService: jest.Mocked<IOrderTransitionService>;
 let orderRepositoryWrite: jest.Mocked<Pick<IOrderRepositoryWrite, 'createOrder'>>;
 let orderPricingService: jest.Mocked<IOrderPricingService>;
 let customerService: jest.Mocked<
@@ -60,6 +63,13 @@ let orderService: OrderService;
 beforeEach(() => {
   orderRepositoryRead = {
     findOrderByIdempotencyKey: jest.fn().mockResolvedValue(null),
+    findOrderById: jest.fn(),
+  };
+  orderTransitionService = {
+    transitionOrder: jest.fn(async ({ order, to }) => ({
+      ...order,
+      status: to,
+    })),
   };
   orderRepositoryWrite = {
     createOrder: jest.fn(async (order) => ({ ...order })),
@@ -86,6 +96,7 @@ beforeEach(() => {
         buildInitialPayment(method, changeForInCents),
       ),
     } as unknown as IPaymentService,
+    orderTransitionService,
     clock: new FixedClock(),
   });
 });
@@ -160,5 +171,35 @@ describe('When the customer profile is incomplete (CUS-R04)', () => {
       orderService.createOrder(aCreateParams()),
     ).rejects.toMatchObject({ code: 'CUSTOMER_PROFILE_INCOMPLETE' });
     expect(orderRepositoryWrite.createOrder).not.toHaveBeenCalled();
+  });
+});
+
+describe('When a customer reads or cancels an order', () => {
+  it("should hide another customer's order as not found (ORD-R18)", async () => {
+    orderRepositoryRead.findOrderById.mockResolvedValue(
+      anOrderFixture({ customerId: 'someone-else' }),
+    );
+
+    await expect(
+      orderService.getOrderForCustomer('order-1', 'customer-1'),
+    ).rejects.toThrow(NotFoundError);
+  });
+
+  it('should cancel the own order as the customer (ORD-R15)', async () => {
+    const order = anOrderFixture({ status: EOrderStatus.PLACED });
+    orderRepositoryRead.findOrderById.mockResolvedValue(order);
+
+    const canceled = await orderService.cancelOrderByCustomer(
+      order.id,
+      'customer-1',
+    );
+
+    expect(canceled.status).toBe(EOrderStatus.CANCELED);
+    expect(orderTransitionService.transitionOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: EOrderStatus.CANCELED,
+        actor: { type: 'CUSTOMER', id: 'customer-1' },
+      }),
+    );
   });
 });
