@@ -6,10 +6,8 @@ import { ICounterRepository } from '../../common/counter.repository';
 import { ITransactionRunner } from '../../common/transaction.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
 import { ICustomerService } from '../../customer/interfaces/customer.service.interface';
-import {
-  buildInitialPayment,
-  isPaidOnDelivery,
-} from '../../payment/initial-payment';
+import { isPaidOnDelivery } from '../../payment/initial-payment';
+import { IPaymentService } from '../../payment/interfaces/payment.service.interface';
 import {
   IOrderPricingService,
   IOrderQuote,
@@ -39,6 +37,7 @@ export class OrderService implements IOrderService {
   private orderPricingService: IOrderPricingService;
   private customerService: ICustomerService;
   private couponService: ICouponService;
+  private paymentService: IPaymentService;
   private clock: IClock;
 
   constructor({
@@ -49,6 +48,7 @@ export class OrderService implements IOrderService {
     orderPricingService,
     customerService,
     couponService,
+    paymentService,
     clock,
   }: IParamsOrderService) {
     this.orderRepositoryRead = orderRepositoryRead;
@@ -58,6 +58,7 @@ export class OrderService implements IOrderService {
     this.orderPricingService = orderPricingService;
     this.customerService = customerService;
     this.couponService = couponService;
+    this.paymentService = paymentService;
     this.clock = clock;
   }
 
@@ -93,16 +94,21 @@ export class OrderService implements IOrderService {
           ORDER_NUMBER_COUNTER,
           context,
         );
+        const id = randomUUID();
+        const payment = await this.paymentService.startPayment({
+          orderId: id,
+          orderNumber: number,
+          method: params.paymentMethod,
+          amountInCents: pricing.totalInCents,
+          changeForInCents: params.changeForInCents,
+        });
         const newOrder = new Order({
           ...pricing,
-          id: randomUUID(),
+          id,
           number,
           customerId: customer.id,
           customerSnapshot: { name: customer.name!, phone: customer.phone! },
-          payment: buildInitialPayment(
-            params.paymentMethod,
-            params.changeForInCents,
-          ),
+          payment,
           status,
           statusHistory: [
             {
