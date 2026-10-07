@@ -23,6 +23,8 @@ tags:
     description: Customer login with Google or SMS code, session refresh and logout
   - name: Customer
     description: Logged-in customer profile and addresses
+  - name: Staff auth
+    description: Store team login with e-mail and password, session refresh and logout
 
 paths:
   /auth/customer/otp/request:
@@ -373,6 +375,67 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /auth/staff/login:
+    post:
+      tags:
+        - Staff auth
+      summary: Log in as a staff user
+      operationId: loginStaff
+      description: Checks the e-mail and password and starts a session. The refresh token is set as an httpOnly cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/staff/refresh:
+    post:
+      tags:
+        - Staff auth
+      summary: Refresh the staff session
+      operationId: refreshStaffSession
+      description: Rotates the refresh cookie and returns a new access token. Inactive users cannot refresh.
+      responses:
+        '200':
+          description: Session refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/staff/logout:
+    post:
+      tags:
+        - Staff auth
+      summary: Log out the staff user
+      operationId: logoutStaff
+      description: Revokes the current session and clears the session cookie.
+      responses:
+        '204':
+          description: Logged out
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -662,6 +725,58 @@ components:
           description: Present only when the address is served (CUS-R03)
         isDefault:
           type: boolean
+    StaffLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    StaffAuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/AccessTokenResponse'
+        - type: object
+          required:
+            - staffUser
+          properties:
+            staffUser:
+              $ref: '#/components/schemas/StaffUser'
+    StaffUser:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - role
+        - isActive
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+            - OWNER
+            - STAFF
+        isActive:
+          type: boolean
+        lastLoginAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
     Error:
       type: object
       required:
