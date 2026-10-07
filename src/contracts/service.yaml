@@ -1455,6 +1455,104 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /admin/products/{id}/image:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags:
+        - Catalog
+      summary: Upload or replace the product image
+      operationId: setProductImage
+      description: JPEG, PNG or WebP up to 3 MB (PRD-R04). The previous image is deleted (PRD-R03).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageUploadRequest'
+      responses:
+        '200':
+          description: The product with the new image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Catalog
+      summary: Remove the product image
+      operationId: removeProductImage
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The product without image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/store/images/{kind}:
+    parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            - logo
+            - banner
+    post:
+      tags:
+        - Store
+      summary: Upload the store logo or banner (owner)
+      operationId: setStoreImage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageUploadRequest'
+      responses:
+        '200':
+          description: The store with the new image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2383,6 +2481,13 @@ components:
           type: integer
           minimum: 1
           maximum: 20
+    ImageUploadRequest:
+      type: object
+      properties:
+        image:
+          type: string
+          format: binary
+          description: JPEG, PNG or WebP, at most 3 MB
     Error:
       type: object
       required:

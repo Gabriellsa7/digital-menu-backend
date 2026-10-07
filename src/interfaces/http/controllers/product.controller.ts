@@ -6,6 +6,10 @@ import {
   IProductService,
 } from '../../../domain/product/interfaces/product.service.interface';
 import { createAuthGuards } from '../middlewares/auth-guards';
+import {
+  imageUpload,
+  uploadedImage,
+} from '../middlewares/image-upload.middleware';
 import { toProductResponse } from '../presenters/product.presenter';
 
 type TIdParams = { id: string };
@@ -41,6 +45,13 @@ export class ProductController implements IController {
       ...staff,
       this.setAvailability,
     );
+    this.router.post(
+      '/admin/products/:id/image',
+      ...staff,
+      imageUpload,
+      this.setImage,
+    );
+    this.router.delete('/admin/products/:id/image', ...staff, this.removeImage);
     this.router.put(
       '/admin/categories/:id/products/order',
       ...staff,
@@ -154,6 +165,37 @@ export class ProductController implements IController {
         req.body.ids,
       );
       res.status(200).json(products.map(toProductResponse));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  setImage = async (
+    req: Request<TIdParams>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const product = await this.productService.setProductImage(
+        req.params.id,
+        uploadedImage(req),
+      );
+      res.status(200).json(toProductResponse(product));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  removeImage = async (
+    req: Request<TIdParams>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const product = await this.productService.removeProductImage(
+        req.params.id,
+      );
+      res.status(200).json(toProductResponse(product));
     } catch (error) {
       next(error);
     }
