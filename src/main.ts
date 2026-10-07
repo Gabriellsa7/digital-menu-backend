@@ -7,6 +7,7 @@ import { env } from './infrastructure/config/env';
 import { CustomerAuthControllerFactory } from './infrastructure/config/factories/customer-auth.controller.factory';
 import { CustomerControllerFactory } from './infrastructure/config/factories/customer.controller.factory';
 import { StaffUserControllerFactory } from './infrastructure/config/factories/staff-user.controller.factory';
+import { StoreControllerFactory } from './infrastructure/config/factories/store.controller.factory';
 import { StaffAuthControllerFactory } from './infrastructure/config/factories/staff-auth.controller.factory';
 import { StaffUserServiceFactory } from './infrastructure/config/factories/staff-user.service.factory';
 import { ensureOwner } from './infrastructure/bootstrap/ensure-owner';
@@ -25,6 +26,7 @@ const app = new Server({
     CustomerControllerFactory.create(),
     StaffAuthControllerFactory.create(),
     StaffUserControllerFactory.create(),
+    StoreControllerFactory.create(),
   ],
   databaseURI: env.databaseUri,
   apiSpecLocation: OPEN_API_SPEC_FILE_LOCATION,
