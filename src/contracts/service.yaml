@@ -37,6 +37,8 @@ tags:
     description: Public storefront menu
   - name: Coupons
     description: Discount coupons managed by the owner and validated by customers
+  - name: Customer orders
+    description: Checkout, order history and payments of the logged-in customer
 
 paths:
   /auth/customer/otp/request:
@@ -1759,6 +1761,83 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /me/orders/quote:
+    post:
+      tags:
+        - Customer orders
+      summary: Price a cart without creating an order
+      operationId: quoteOrder
+      description: Runs every checkout rule (ORD-R01..R10). Prices sent by the client are ignored.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: Priced breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderQuote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders:
+    post:
+      tags:
+        - Customer orders
+      summary: Place an order
+      operationId: createOrder
+      description: Repeating the same `Idempotency-Key` returns the order created the first time (ORD-R11).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2886,6 +2965,330 @@ components:
           type: integer
         discountInCents:
           type: integer
+    PaymentMethod:
+      type: string
+      enum:
+        - PIX
+        - CARD_ONLINE
+        - CASH_ON_DELIVERY
+        - CARD_ON_DELIVERY
+    PaymentStatus:
+      type: string
+      enum:
+        - PENDING
+        - APPROVED
+        - DECLINED
+        - EXPIRED
+        - REFUNDED
+        - ON_DELIVERY
+    OrderStatus:
+      type: string
+      enum:
+        - AWAITING_PAYMENT
+        - PLACED
+        - PREPARING
+        - READY
+        - OUT_FOR_DELIVERY
+        - COMPLETED
+        - REJECTED
+        - CANCELED
+    CartItemRequest:
+      type: object
+      required:
+        - productId
+        - quantity
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+        options:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            required:
+              - groupId
+              - optionId
+            properties:
+              groupId:
+                type: string
+              optionId:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+                maximum: 50
+        notes:
+          type: string
+          maxLength: 140
+    QuoteRequest:
+      type: object
+      required:
+        - items
+        - fulfillmentType
+        - paymentMethod
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/CartItemRequest'
+        fulfillmentType:
+          $ref: '#/components/schemas/FulfillmentType'
+        addressId:
+          type: string
+        couponCode:
+          type: string
+          maxLength: 20
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        changeForInCents:
+          type: integer
+          minimum: 1
+    CreateOrderRequest:
+      allOf:
+        - $ref: '#/components/schemas/QuoteRequest'
+        - type: object
+          properties:
+            notes:
+              type: string
+              maxLength: 280
+    OrderItem:
+      type: object
+      required:
+        - productId
+        - name
+        - unitPriceInCents
+        - quantity
+        - options
+        - totalInCents
+      properties:
+        productId:
+          type: string
+        name:
+          type: string
+        imageUrl:
+          type: string
+        unitPriceInCents:
+          type: integer
+        quantity:
+          type: integer
+        options:
+          type: array
+          items:
+            type: object
+            required:
+              - groupId
+              - groupName
+              - optionId
+              - name
+              - priceInCents
+              - quantity
+            properties:
+              groupId:
+                type: string
+              groupName:
+                type: string
+              optionId:
+                type: string
+              name:
+                type: string
+              priceInCents:
+                type: integer
+              quantity:
+                type: integer
+        notes:
+          type: string
+        totalInCents:
+          type: integer
+    OrderTotals:
+      type: object
+      required:
+        - items
+        - fulfillmentType
+        - subtotalInCents
+        - deliveryFeeInCents
+        - discountInCents
+        - totalInCents
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        fulfillmentType:
+          $ref: '#/components/schemas/FulfillmentType'
+        deliveryAddress:
+          $ref: '#/components/schemas/StoreAddress'
+        deliveryZone:
+          type: object
+          required:
+            - id
+            - name
+            - feeInCents
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            feeInCents:
+              type: integer
+        subtotalInCents:
+          type: integer
+        deliveryFeeInCents:
+          type: integer
+        discountInCents:
+          type: integer
+        totalInCents:
+          type: integer
+        coupon:
+          type: object
+          required:
+            - id
+            - code
+            - type
+            - value
+          properties:
+            id:
+              type: string
+            code:
+              type: string
+            type:
+              $ref: '#/components/schemas/CouponType'
+            value:
+              type: integer
+    OrderQuote:
+      allOf:
+        - $ref: '#/components/schemas/OrderTotals'
+        - type: object
+          required:
+            - etaMinMinutes
+            - etaMaxMinutes
+          properties:
+            etaMinMinutes:
+              type: integer
+            etaMaxMinutes:
+              type: integer
+    Payment:
+      type: object
+      required:
+        - method
+        - status
+        - failedAttempts
+      properties:
+        method:
+          $ref: '#/components/schemas/PaymentMethod'
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        changeForInCents:
+          type: integer
+        pix:
+          type: object
+          required:
+            - copyPaste
+            - qrCodeBase64
+            - expiresAt
+          properties:
+            copyPaste:
+              type: string
+            qrCodeBase64:
+              type: string
+            expiresAt:
+              type: string
+              format: date-time
+        card:
+          type: object
+          required:
+            - brand
+            - last4
+          properties:
+            brand:
+              type: string
+            last4:
+              type: string
+        failedAttempts:
+          type: integer
+        transactionId:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+    Order:
+      allOf:
+        - $ref: '#/components/schemas/OrderTotals'
+        - type: object
+          required:
+            - id
+            - number
+            - customerId
+            - customerSnapshot
+            - payment
+            - status
+            - statusHistory
+            - createdAt
+          properties:
+            id:
+              type: string
+            number:
+              type: integer
+            customerId:
+              type: string
+            customerSnapshot:
+              type: object
+              required:
+                - name
+                - phone
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+            payment:
+              $ref: '#/components/schemas/Payment'
+            status:
+              $ref: '#/components/schemas/OrderStatus'
+            statusHistory:
+              type: array
+              items:
+                type: object
+                required:
+                  - status
+                  - at
+                  - by
+                properties:
+                  status:
+                    $ref: '#/components/schemas/OrderStatus'
+                  at:
+                    type: string
+                    format: date-time
+                  by:
+                    type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - CUSTOMER
+                          - STAFF
+                          - SYSTEM
+                      id:
+                        type: string
+                  reason:
+                    type: string
+            notes:
+              type: string
+            estimatedReadyAt:
+              type: string
+              format: date-time
+            cancelReason:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
     Error:
       type: object
       required:

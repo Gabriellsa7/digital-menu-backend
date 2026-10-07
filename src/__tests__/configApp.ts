@@ -10,6 +10,7 @@ import { OptionGroupControllerFactory } from '../infrastructure/config/factories
 import { ProductControllerFactory } from '../infrastructure/config/factories/product.controller.factory';
 import { MenuControllerFactory } from '../infrastructure/config/factories/menu.controller.factory';
 import { CouponControllerFactory } from '../infrastructure/config/factories/coupon.controller.factory';
+import { CustomerOrderControllerFactory } from '../infrastructure/config/factories/customer-order.controller.factory';
 import { StaffAuthControllerFactory } from '../infrastructure/config/factories/staff-auth.controller.factory';
 import { MockSmsProvider } from '../infrastructure/sms/mock.sms.provider';
 import { FakeGoogleIdentityVerifier } from './helpers/fake.google-identity.verifier';
@@ -39,6 +40,7 @@ export const app = new Server({
     ProductControllerFactory.create(),
     MenuControllerFactory.create(),
     CouponControllerFactory.create(),
+    CustomerOrderControllerFactory.create(),
   ],
   databaseURI: process.env.DATABASE_URI,
   apiSpecLocation: OPEN_API_SPEC_FILE_LOCATION,
