@@ -8,6 +8,7 @@ import { DeliveryZoneControllerFactory } from '../infrastructure/config/factorie
 import { CategoryControllerFactory } from '../infrastructure/config/factories/category.controller.factory';
 import { OptionGroupControllerFactory } from '../infrastructure/config/factories/option-group.controller.factory';
 import { ProductControllerFactory } from '../infrastructure/config/factories/product.controller.factory';
+import { MenuControllerFactory } from '../infrastructure/config/factories/menu.controller.factory';
 import { StaffAuthControllerFactory } from '../infrastructure/config/factories/staff-auth.controller.factory';
 import { MockSmsProvider } from '../infrastructure/sms/mock.sms.provider';
 import { FakeGoogleIdentityVerifier } from './helpers/fake.google-identity.verifier';
@@ -35,6 +36,7 @@ export const app = new Server({
     CategoryControllerFactory.create(),
     OptionGroupControllerFactory.create(),
     ProductControllerFactory.create(),
+    MenuControllerFactory.create(),
   ],
   databaseURI: process.env.DATABASE_URI,
   apiSpecLocation: OPEN_API_SPEC_FILE_LOCATION,

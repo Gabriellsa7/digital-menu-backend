@@ -45,6 +45,7 @@ export interface IParamsProductService {
 export interface IProductService {
   listProducts(params: IParamsListProducts): Promise<IPaginatedResult<IProduct>>;
   getProductById(id: string): Promise<IProduct>;
+  listActiveProducts(): Promise<IProduct[]>;
   findProductsByIds(ids: string[]): Promise<IProduct[]>;
   createProduct(params: IParamsProductData): Promise<IProduct>;
   updateProduct(params: IParamsUpdateProduct): Promise<IProduct>;

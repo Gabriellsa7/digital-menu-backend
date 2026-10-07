@@ -33,6 +33,8 @@ tags:
     description: Neighborhoods served by the store, with fee and ETA
   - name: Catalog
     description: Categories, option groups and products managed by the store team
+  - name: Menu
+    description: Public storefront menu
 
 paths:
   /auth/customer/otp/request:
@@ -1553,6 +1555,43 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /public/menu:
+    get:
+      tags:
+        - Menu
+      summary: Get the whole menu in display order
+      operationId: getMenu
+      description: Active categories with their active products and inlined option groups. Sold-out products are listed with `isAvailable=false` (PRD-R05).
+      responses:
+        '200':
+          description: The menu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Menu'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /public/products/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+        - Menu
+      summary: Get one menu product with its option groups
+      operationId: getMenuProduct
+      responses:
+        '200':
+          description: The product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuProduct'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2488,6 +2527,62 @@ components:
           type: string
           format: binary
           description: JPEG, PNG or WebP, at most 3 MB
+    MenuProduct:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - priceInCents
+        - fromPriceInCents
+        - isAvailable
+        - optionGroups
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        priceInCents:
+          type: integer
+        fromPriceInCents:
+          type: integer
+          description: Base price plus the cheapest required options ("a partir de")
+        imageUrl:
+          type: string
+        isAvailable:
+          type: boolean
+        servesPeople:
+          type: integer
+        optionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroup'
+    MenuCategory:
+      type: object
+      required:
+        - id
+        - name
+        - products
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuProduct'
+    Menu:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuCategory'
     Error:
       type: object
       required:
