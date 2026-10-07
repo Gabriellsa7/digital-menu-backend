@@ -13,6 +13,7 @@ import { CategoryControllerFactory } from './infrastructure/config/factories/cat
 import { OptionGroupControllerFactory } from './infrastructure/config/factories/option-group.controller.factory';
 import { ProductControllerFactory } from './infrastructure/config/factories/product.controller.factory';
 import { MenuControllerFactory } from './infrastructure/config/factories/menu.controller.factory';
+import { CouponControllerFactory } from './infrastructure/config/factories/coupon.controller.factory';
 import { StaffAuthControllerFactory } from './infrastructure/config/factories/staff-auth.controller.factory';
 import { StaffUserServiceFactory } from './infrastructure/config/factories/staff-user.service.factory';
 import { ensureOwner } from './infrastructure/bootstrap/ensure-owner';
@@ -37,6 +38,7 @@ const app = new Server({
     OptionGroupControllerFactory.create(),
     ProductControllerFactory.create(),
     MenuControllerFactory.create(),
+    CouponControllerFactory.create(),
   ],
   databaseURI: env.databaseUri,
   apiSpecLocation: OPEN_API_SPEC_FILE_LOCATION,
