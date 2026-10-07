@@ -35,6 +35,8 @@ tags:
     description: Categories, option groups and products managed by the store team
   - name: Menu
     description: Public storefront menu
+  - name: Coupons
+    description: Discount coupons managed by the owner and validated by customers
 
 paths:
   /auth/customer/otp/request:
@@ -1592,6 +1594,171 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /admin/coupons:
+    get:
+      tags:
+        - Coupons
+      summary: List coupons (owner)
+      operationId: listCoupons
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Coupons, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Coupon'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Coupons
+      summary: Create a coupon (owner)
+      operationId: createCoupon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/coupons/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Coupons
+      summary: Replace a coupon (owner)
+      operationId: updateCoupon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/coupons/{id}/active:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags:
+        - Coupons
+      summary: Activate or deactivate a coupon (owner)
+      operationId: setCouponActive
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActiveRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/coupons/validate:
+    post:
+      tags:
+        - Coupons
+      summary: Preview the discount of a coupon
+      operationId: validateCoupon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponValidationRequest'
+      responses:
+        '200':
+          description: The coupon applies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2583,6 +2750,142 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MenuCategory'
+    CouponType:
+      type: string
+      enum:
+        - PERCENTAGE
+        - FIXED
+        - FREE_DELIVERY
+    FulfillmentType:
+      type: string
+      enum:
+        - DELIVERY
+        - PICKUP
+    Coupon:
+      type: object
+      required:
+        - id
+        - code
+        - type
+        - value
+        - minOrderInCents
+        - startsAt
+        - expiresAt
+        - usagePerCustomer
+        - usedCount
+        - firstOrderOnly
+        - isActive
+        - createdAt
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        type:
+          $ref: '#/components/schemas/CouponType'
+        value:
+          type: integer
+          description: Percent (1-100) or cents
+        maxDiscountInCents:
+          type: integer
+        minOrderInCents:
+          type: integer
+        startsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        usageLimit:
+          type: integer
+        usagePerCustomer:
+          type: integer
+        usedCount:
+          type: integer
+        firstOrderOnly:
+          type: boolean
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    CouponRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - type
+        - value
+        - startsAt
+        - expiresAt
+      properties:
+        code:
+          type: string
+          pattern: '^[A-Za-z0-9]{4,20}$'
+        type:
+          $ref: '#/components/schemas/CouponType'
+        value:
+          type: integer
+          minimum: 0
+        maxDiscountInCents:
+          type: integer
+          minimum: 1
+        minOrderInCents:
+          type: integer
+          minimum: 0
+        startsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        usageLimit:
+          type: integer
+          minimum: 1
+        usagePerCustomer:
+          type: integer
+          minimum: 1
+          maximum: 100
+        firstOrderOnly:
+          type: boolean
+        isActive:
+          type: boolean
+    CouponValidationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - subtotalInCents
+        - fulfillmentType
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+        subtotalInCents:
+          type: integer
+          minimum: 0
+        deliveryFeeInCents:
+          type: integer
+          minimum: 0
+        fulfillmentType:
+          $ref: '#/components/schemas/FulfillmentType'
+    CouponValidationResponse:
+      type: object
+      required:
+        - code
+        - type
+        - value
+        - discountInCents
+      properties:
+        code:
+          type: string
+        type:
+          $ref: '#/components/schemas/CouponType'
+        value:
+          type: integer
+        discountInCents:
+          type: integer
     Error:
       type: object
       required:
