@@ -3,6 +3,7 @@ import { ICounterRepository } from '../../common/counter.repository';
 import { ITransactionRunner } from '../../common/transaction.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
 import { ICustomerService } from '../../customer/interfaces/customer.service.interface';
+import { IPaymentService } from '../../payment/interfaces/payment.service.interface';
 import { IOrderRepositoryRead } from '../repository/order.repository.read';
 import { IOrderRepositoryWrite } from '../repository/order.repository.write';
 import {
@@ -25,6 +26,7 @@ export interface IParamsOrderService {
   orderPricingService: IOrderPricingService;
   customerService: ICustomerService;
   couponService: ICouponService;
+  paymentService: IPaymentService;
   clock: IClock;
 }
 

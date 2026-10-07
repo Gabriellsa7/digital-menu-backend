@@ -16,6 +16,8 @@ import {
   EPaymentStatus,
 } from '../../domain/payment/interfaces/payment.interface';
 import { BusinessRuleError } from '../../domain/errors/business-rule.error';
+import { IPaymentService } from '../../domain/payment/interfaces/payment.service.interface';
+import { buildInitialPayment } from '../../domain/payment/initial-payment';
 import { aCustomerFixture } from '../helpers/catalog.fixtures';
 import { anOrderFixture } from '../helpers/order.fixtures';
 import { FixedClock } from '../helpers/fixed.clock';
@@ -79,6 +81,11 @@ beforeEach(() => {
     orderPricingService,
     customerService: customerService as unknown as ICustomerService,
     couponService: couponService as unknown as ICouponService,
+    paymentService: {
+      startPayment: jest.fn(async ({ method, changeForInCents }) =>
+        buildInitialPayment(method, changeForInCents),
+      ),
+    } as unknown as IPaymentService,
     clock: new FixedClock(),
   });
 });
