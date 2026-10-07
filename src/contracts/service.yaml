@@ -1067,6 +1067,178 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /admin/option-groups:
+    get:
+      tags:
+        - Catalog
+      summary: List the option groups
+      operationId: listOptionGroups
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Option groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OptionGroup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Catalog
+      summary: Create an option group with its options
+      operationId: createOptionGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OptionGroupRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/option-groups/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+        - Catalog
+      summary: Get an option group
+      operationId: getOptionGroup
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The option group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - Catalog
+      summary: Replace an option group
+      operationId: updateOptionGroup
+      description: Options sent with an existing `id` keep it; options without one are created.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OptionGroupRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Catalog
+      summary: Delete an option group not linked to products
+      operationId: deleteOptionGroup
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/option-groups/{id}/options/{optionId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: optionId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      tags:
+        - Catalog
+      summary: Mark an option as available or sold out
+      operationId: setOptionAvailability
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityRequest'
+      responses:
+        '200':
+          description: The option group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1780,6 +1952,108 @@ components:
           maxItems: 500
           items:
             type: string
+    Option:
+      type: object
+      required:
+        - id
+        - name
+        - priceInCents
+        - isAvailable
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Bacon
+        priceInCents:
+          type: integer
+          example: 400
+        isAvailable:
+          type: boolean
+    OptionGroup:
+      type: object
+      required:
+        - id
+        - name
+        - minSelections
+        - maxSelections
+        - allowRepeat
+        - options
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Adicionais
+        minSelections:
+          type: integer
+          description: 0 = optional
+        maxSelections:
+          type: integer
+          description: 1 = pick one
+        allowRepeat:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/Option'
+    OptionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - priceInCents
+      properties:
+        id:
+          type: string
+          description: Keep the id of an existing option
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        priceInCents:
+          type: integer
+          minimum: 0
+        isAvailable:
+          type: boolean
+    OptionGroupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - minSelections
+        - maxSelections
+        - allowRepeat
+        - options
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        minSelections:
+          type: integer
+          minimum: 0
+          maximum: 50
+        maxSelections:
+          type: integer
+          minimum: 1
+          maximum: 50
+        allowRepeat:
+          type: boolean
+        options:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/OptionRequest'
+    AvailabilityRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - isAvailable
+      properties:
+        isAvailable:
+          type: boolean
     Error:
       type: object
       required:
