@@ -3,6 +3,7 @@ import { Logger } from 'traceability';
 import { IClock } from '../../common/clock.interface';
 import { BusinessRuleError } from '../../errors/business-rule.error';
 import { NotFoundError } from '../../errors/not-found.error';
+import { IOrderEventPublisher } from '../../order/events/order.event.publisher';
 import { IOrderTransitionService } from '../../order/interfaces/order-transition.service.interface';
 import {
   EOrderActorType,
@@ -41,6 +42,7 @@ export class PaymentService implements IPaymentService {
   private orderRepositoryWrite: IOrderRepositoryWrite;
   private orderTransitionService: IOrderTransitionService;
   private paymentGateway: IPaymentGateway;
+  private orderEventPublisher: IOrderEventPublisher;
   private clock: IClock;
 
   constructor({
@@ -48,12 +50,14 @@ export class PaymentService implements IPaymentService {
     orderRepositoryWrite,
     orderTransitionService,
     paymentGateway,
+    orderEventPublisher,
     clock,
   }: IParamsPaymentService) {
     this.orderRepositoryRead = orderRepositoryRead;
     this.orderRepositoryWrite = orderRepositoryWrite;
     this.orderTransitionService = orderTransitionService;
     this.paymentGateway = paymentGateway;
+    this.orderEventPublisher = orderEventPublisher;
     this.clock = clock;
   }
 
@@ -127,11 +131,14 @@ export class PaymentService implements IPaymentService {
         set: { payment },
       });
     } else {
-      await this.orderRepositoryWrite.updateOrderPayment(
+      const updated = await this.orderRepositoryWrite.updateOrderPayment(
         order.id,
         EOrderStatus.AWAITING_PAYMENT,
         payment,
       );
+      if (updated) {
+        this.orderEventPublisher.publishOrderPaymentUpdated(updated);
+      }
     }
     throw new BusinessRuleError(
       result.outcome === ECardChargeOutcome.DECLINED

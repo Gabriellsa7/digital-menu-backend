@@ -10,10 +10,12 @@ import {
 } from '../../common/storage.provider.interface';
 import { BusinessRuleError } from '../../errors/business-rule.error';
 import { NotFoundError } from '../../errors/not-found.error';
+import { IStoreEventPublisher } from '../events/store.event.publisher';
 import {
   EManualStatus,
   IOpeningHour,
   IStore,
+  IStoreStatus,
 } from '../interfaces/store.interface';
 import {
   EStoreImageKind,
@@ -39,17 +41,20 @@ export class StoreService implements IStoreService {
   private storeRepositoryRead: IStoreRepositoryRead;
   private storeRepositoryWrite: IStoreRepositoryWrite;
   private storageProvider: IStorageProvider;
+  private storeEventPublisher: IStoreEventPublisher;
   private clock: IClock;
 
   constructor({
     storeRepositoryRead,
     storeRepositoryWrite,
     storageProvider,
+    storeEventPublisher,
     clock,
   }: IParamsStoreService) {
     this.storeRepositoryRead = storeRepositoryRead;
     this.storeRepositoryWrite = storeRepositoryWrite;
     this.storageProvider = storageProvider;
+    this.storeEventPublisher = storeEventPublisher;
     this.clock = clock;
   }
 
@@ -116,11 +121,13 @@ export class StoreService implements IStoreService {
         ...(!manualStatusUntil && { unset: ['manualStatusUntil'] }),
       }),
     );
+    const status = updated.statusAt(now);
+    this.storeEventPublisher.publishStoreStatusChanged(status);
     Logger.info('Store manual status changed', {
       eventName: 'store.manual_status_changed',
       manualStatus,
     });
-    return { store: updated, status: updated.statusAt(now) };
+    return { store: updated, status };
   }
 
   @ErrorHandler()
@@ -134,6 +141,24 @@ export class StoreService implements IStoreService {
       });
     }
     return store;
+  }
+
+  @ErrorHandler()
+  async refreshStoreStatus(): Promise<IStoreStatus> {
+    const store = new Store(await this.getStore());
+    const now = this.clock.now();
+    const status = store.statusAt(now);
+    if (store.manualStatus !== status.manualStatus) {
+      await this.updateStoreFields({
+        set: { manualStatus: EManualStatus.AUTO },
+        unset: ['manualStatusUntil'],
+      });
+      Logger.info('Store manual status expired', {
+        eventName: 'store.manual_status_expired',
+        manualStatus: store.manualStatus,
+      });
+    }
+    return status;
   }
 
   @ErrorHandler()

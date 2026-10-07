@@ -13,6 +13,7 @@ import {
   IParamsSearchOrders,
 } from '../repository/order.repository.read';
 import { IOrderTransitionService } from './order-transition.service.interface';
+import { IOrderEventPublisher } from '../events/order.event.publisher';
 import { IOrderRepositoryWrite } from '../repository/order.repository.write';
 import {
   IOrderPricingService,
@@ -49,6 +50,7 @@ export interface IParamsOrderService {
   couponService: ICouponService;
   paymentService: IPaymentService;
   orderTransitionService: IOrderTransitionService;
+  orderEventPublisher: IOrderEventPublisher;
   clock: IClock;
 }
 

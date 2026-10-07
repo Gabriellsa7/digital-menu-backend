@@ -5,6 +5,7 @@ import { ProductRepositoryWrite } from '../../repository/product/product.reposit
 import { CategoryServiceFactory } from './category.service.factory';
 import { OptionGroupServiceFactory } from './option-group.service.factory';
 import { StorageProviderFactory } from './storage.provider.factory';
+import { StoreEventPublisherFactory } from './store-event-publisher.factory';
 
 export class ProductServiceFactory {
   static create() {
@@ -14,6 +15,7 @@ export class ProductServiceFactory {
       categoryService: CategoryServiceFactory.create(),
       optionGroupService: OptionGroupServiceFactory.create(),
       storageProvider: StorageProviderFactory.create(),
+      storeEventPublisher: StoreEventPublisherFactory.create(),
       clock: new SystemClock(),
     });
   }

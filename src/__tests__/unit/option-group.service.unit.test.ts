@@ -58,6 +58,11 @@ beforeEach(() => {
     optionGroupRepositoryRead,
     optionGroupRepositoryWrite,
     optionGroupUsage,
+    storeEventPublisher: {
+      publishStoreStatusChanged: jest.fn(),
+      publishProductAvailabilityChanged: jest.fn(),
+      publishOptionAvailabilityChanged: jest.fn(),
+    },
     clock,
   });
 });

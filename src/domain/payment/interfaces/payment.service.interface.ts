@@ -1,4 +1,5 @@
 import { IClock } from '../../common/clock.interface';
+import { IOrderEventPublisher } from '../../order/events/order.event.publisher';
 import { IOrderTransitionService } from '../../order/interfaces/order-transition.service.interface';
 import { IOrder } from '../../order/interfaces/order.interface';
 import { IOrderRepositoryRead } from '../../order/repository/order.repository.read';
@@ -30,6 +31,7 @@ export interface IParamsPaymentService {
   orderRepositoryWrite: IOrderRepositoryWrite;
   orderTransitionService: IOrderTransitionService;
   paymentGateway: IPaymentGateway;
+  orderEventPublisher: IOrderEventPublisher;
   clock: IClock;
 }
 

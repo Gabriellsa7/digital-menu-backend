@@ -19,6 +19,7 @@ import {
   IParamsQuoteOrder,
 } from '../interfaces/order-pricing.service.interface';
 import { IOrderTransitionService } from '../interfaces/order-transition.service.interface';
+import { IOrderEventPublisher } from '../events/order.event.publisher';
 import {
   EOrderActorType,
   EOrderStatus,
@@ -51,6 +52,7 @@ export class OrderService implements IOrderService {
   private couponService: ICouponService;
   private paymentService: IPaymentService;
   private orderTransitionService: IOrderTransitionService;
+  private orderEventPublisher: IOrderEventPublisher;
   private clock: IClock;
 
   constructor({
@@ -63,6 +65,7 @@ export class OrderService implements IOrderService {
     couponService,
     paymentService,
     orderTransitionService,
+    orderEventPublisher,
     clock,
   }: IParamsOrderService) {
     this.orderRepositoryRead = orderRepositoryRead;
@@ -74,6 +77,7 @@ export class OrderService implements IOrderService {
     this.couponService = couponService;
     this.paymentService = paymentService;
     this.orderTransitionService = orderTransitionService;
+    this.orderEventPublisher = orderEventPublisher;
     this.clock = clock;
   }
 
@@ -145,6 +149,9 @@ export class OrderService implements IOrderService {
         return this.orderRepositoryWrite.createOrder(newOrder, context);
       },
     );
+    if (order.status === EOrderStatus.PLACED) {
+      this.orderEventPublisher.publishOrderCreated(order);
+    }
     Logger.info('Order created', {
       eventName: 'order.created',
       orderId: order.id,
