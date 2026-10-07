@@ -1797,6 +1797,31 @@ paths:
           $ref: '#/components/responses/ServerError'
 
   /me/orders:
+    get:
+      tags:
+        - Customer orders
+      summary: List the own orders, newest first
+      operationId: listCustomerOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
     post:
       tags:
         - Customer orders
@@ -1898,6 +1923,70 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags:
+        - Customer orders
+      summary: Get an own order with its history and payment
+      operationId: getCustomerOrder
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders/{orderId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags:
+        - Customer orders
+      summary: Cancel an own order
+      operationId: cancelCustomerOrder
+      description: Allowed while AWAITING_PAYMENT or PLACED (ORD-R15). Approved payments are refunded (ORD-R16).
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+      responses:
+        '200':
+          description: The canceled order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
@@ -3385,6 +3474,67 @@ components:
         cvv:
           type: string
           pattern: '^\d{3,4}$'
+    OrderSummary:
+      type: object
+      required:
+        - id
+        - number
+        - status
+        - fulfillmentType
+        - totalInCents
+        - itemsCount
+        - paymentMethod
+        - paymentStatus
+        - customerName
+        - createdAt
+      properties:
+        id:
+          type: string
+        number:
+          type: integer
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        fulfillmentType:
+          $ref: '#/components/schemas/FulfillmentType'
+        totalInCents:
+          type: integer
+        itemsCount:
+          type: integer
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+        customerName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    OrderList:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - limit
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderSummary'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+    ReasonRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
     Error:
       type: object
       required:
