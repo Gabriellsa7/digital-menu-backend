@@ -203,3 +203,55 @@ describe('When a customer reads or cancels an order', () => {
     );
   });
 });
+
+describe('When staff manages an order', () => {
+  it('should set estimatedReadyAt when accepting (ORD-R13)', async () => {
+    const order = anOrderFixture({ status: EOrderStatus.PLACED });
+    orderRepositoryRead.findOrderById.mockResolvedValue(order);
+
+    await orderService.changeOrderStatus({
+      orderId: order.id,
+      staffId: 'staff-1',
+      status: EOrderStatus.PREPARING,
+      estimatedMinutes: 25,
+    });
+
+    expect(orderTransitionService.transitionOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: EOrderStatus.PREPARING,
+        actor: { type: 'STAFF', id: 'staff-1' },
+        set: { estimatedReadyAt: new Date('2026-10-01T12:25:00.000Z') },
+      }),
+    );
+  });
+
+  it('should reject with the reason as the staff actor (ORD-R14)', async () => {
+    const order = anOrderFixture({ status: EOrderStatus.PLACED });
+    orderRepositoryRead.findOrderById.mockResolvedValue(order);
+
+    await orderService.rejectOrder({
+      orderId: order.id,
+      staffId: 'staff-1',
+      reason: 'Sem pão',
+    });
+
+    expect(orderTransitionService.transitionOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: EOrderStatus.REJECTED,
+        reason: 'Sem pão',
+      }),
+    );
+  });
+
+  it('should throw NotFoundError for an unknown order', async () => {
+    orderRepositoryRead.findOrderById.mockResolvedValue(null);
+
+    await expect(
+      orderService.cancelOrderByStaff({
+        orderId: 'missing',
+        staffId: 'staff-1',
+        reason: 'x',
+      }),
+    ).rejects.toThrow(NotFoundError);
+  });
+});

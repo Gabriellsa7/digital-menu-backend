@@ -26,14 +26,20 @@ import {
 } from '../interfaces/order.interface';
 import {
   IOrderService,
+  IParamsChangeOrderStatus,
   IParamsCreateOrder,
+  IParamsEndOrderByStaff,
   IParamsOrderService,
 } from '../interfaces/order.service.interface';
 import { Order } from '../order.entity';
-import { IOrderRepositoryRead } from '../repository/order.repository.read';
+import {
+  IOrderRepositoryRead,
+  IParamsSearchOrders,
+} from '../repository/order.repository.read';
 import { IOrderRepositoryWrite } from '../repository/order.repository.write';
 
 export const ORDER_NUMBER_COUNTER = 'order_number';
+export const DEFAULT_PREPARATION_MINUTES = 30;
 
 export class OrderService implements IOrderService {
   private orderRepositoryRead: IOrderRepositoryRead;
@@ -181,6 +187,71 @@ export class OrderService implements IOrderService {
       to: EOrderStatus.CANCELED,
       actor: { type: EOrderActorType.CUSTOMER, id: customerId },
       reason: reason ?? 'Canceled by the customer',
+    });
+  }
+
+  @ErrorHandler()
+  async searchOrders(
+    params: IParamsSearchOrders,
+  ): Promise<IPaginatedResult<IOrder>> {
+    return this.orderRepositoryRead.searchOrders(params);
+  }
+
+  @ErrorHandler()
+  async listActiveOrders(): Promise<IOrder[]> {
+    return this.orderRepositoryRead.listActiveOrders();
+  }
+
+  @ErrorHandler()
+  async getOrderById(orderId: string): Promise<IOrder> {
+    const order = await this.orderRepositoryRead.findOrderById(orderId);
+
+    return order ? order : this.throwOrderNotFound();
+  }
+
+  @ErrorHandler()
+  async changeOrderStatus({
+    orderId,
+    staffId,
+    status,
+    estimatedMinutes,
+  }: IParamsChangeOrderStatus): Promise<IOrder> {
+    const order = await this.getOrderById(orderId);
+    const minutes = estimatedMinutes ?? DEFAULT_PREPARATION_MINUTES;
+    return this.orderTransitionService.transitionOrder({
+      order,
+      to: status,
+      actor: { type: EOrderActorType.STAFF, id: staffId },
+      ...(status === EOrderStatus.PREPARING && {
+        set: {
+          estimatedReadyAt: new Date(
+            this.clock.now().getTime() + minutes * 60 * 1000,
+          ),
+        },
+      }),
+    });
+  }
+
+  @ErrorHandler()
+  async rejectOrder(params: IParamsEndOrderByStaff): Promise<IOrder> {
+    return this.endOrderByStaff(params, EOrderStatus.REJECTED);
+  }
+
+  @ErrorHandler()
+  async cancelOrderByStaff(params: IParamsEndOrderByStaff): Promise<IOrder> {
+    return this.endOrderByStaff(params, EOrderStatus.CANCELED);
+  }
+
+  private async endOrderByStaff(
+    { orderId, staffId, reason }: IParamsEndOrderByStaff,
+    status: EOrderStatus,
+  ): Promise<IOrder> {
+    const order = await this.getOrderById(orderId);
+    return this.orderTransitionService.transitionOrder({
+      order,
+      to: status,
+      actor: { type: EOrderActorType.STAFF, id: staffId },
+      reason,
     });
   }
 
