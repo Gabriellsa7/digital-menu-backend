@@ -8,6 +8,7 @@ import { IPasswordHasher } from '../../common/password-hasher.interface';
 import { BusinessRuleError } from '../../errors/business-rule.error';
 import { ConflictError } from '../../errors/conflict.error';
 import { NotFoundError } from '../../errors/not-found.error';
+import { UnauthorizedError } from '../../errors/unauthorized.error';
 import { EStaffRole, IStaffUser } from '../interfaces/staff-user.interface';
 import {
   IParamsChangeStaffUserPassword,
@@ -15,6 +16,7 @@ import {
   IParamsSetStaffUserActive,
   IParamsStaffUserService,
   IParamsUpdateStaffUser,
+  IParamsVerifyStaffUserCredentials,
   IStaffUserService,
 } from '../interfaces/staff-user.service.interface';
 import { IStaffUserRepositoryRead } from '../repository/staff-user.repository.read';
@@ -161,6 +163,38 @@ export class StaffUserService implements IStaffUserService {
       id,
       await this.passwordHasher.hashPassword(newPassword),
     );
+  }
+
+  @ErrorHandler()
+  async verifyStaffUserCredentials({
+    email,
+    password,
+  }: IParamsVerifyStaffUserCredentials): Promise<IStaffUser> {
+    const staffUser =
+      await this.staffUserRepositoryRead.findStaffUserByEmailWithPassword(
+        StaffUser.normalizeEmail(email),
+      );
+    const isPasswordValid =
+      staffUser !== null &&
+      (await this.passwordHasher.isPasswordMatch(
+        password,
+        staffUser.passwordHash,
+      ));
+    if (!staffUser || !isPasswordValid) {
+      throw new UnauthorizedError('Invalid credentials', 'INVALID_CREDENTIALS');
+    }
+    if (!staffUser.isActive) {
+      throw new UnauthorizedError('User is inactive', 'USER_INACTIVE');
+    }
+
+    return this.updateStaffUserFields(staffUser.id, {
+      lastLoginAt: this.clock.now(),
+    });
+  }
+
+  @ErrorHandler()
+  async hasOwner(): Promise<boolean> {
+    return (await this.staffUserRepositoryRead.countActiveOwners()) > 0;
   }
 
   private async assertNotLastOwner(): Promise<void> {

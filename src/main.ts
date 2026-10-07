@@ -6,6 +6,8 @@ import { env } from './infrastructure/config/env';
 
 import { CustomerAuthControllerFactory } from './infrastructure/config/factories/customer-auth.controller.factory';
 import { CustomerControllerFactory } from './infrastructure/config/factories/customer.controller.factory';
+import { StaffUserServiceFactory } from './infrastructure/config/factories/staff-user.service.factory';
+import { ensureOwner } from './infrastructure/bootstrap/ensure-owner';
 
 const OPEN_API_SPEC_FILE_LOCATION = path.resolve(
   __dirname,
@@ -26,6 +28,12 @@ const app = new Server({
 
 async function start() {
   await app.databaseSetup();
+  await ensureOwner({
+    staffUserService: StaffUserServiceFactory.create(),
+    name: env.bootstrapOwnerName,
+    email: env.bootstrapOwnerEmail,
+    password: env.bootstrapOwnerPassword,
+  });
   const httpServer = app.listen();
 
   const shutdown = (signal: string) => {
