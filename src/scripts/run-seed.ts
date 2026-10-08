@@ -1,11 +1,19 @@
 import mongoose from 'mongoose';
 import { Logger } from 'traceability';
+import { IParamsCouponData } from '../domain/coupon/interfaces/coupon.service.interface';
+import { ICartItem } from '../domain/order/interfaces/order-pricing.service.interface';
 import {
   EFulfillmentType,
   EOrderStatus,
 } from '../domain/order/interfaces/order.interface';
 import { EPaymentMethod } from '../domain/payment/interfaces/payment.interface';
-import { EManualStatus } from '../domain/store/interfaces/store.interface';
+import { IParamsCreateStaffUser } from '../domain/staff-user/interfaces/staff-user.service.interface';
+import {
+  EManualStatus,
+  IOpeningHour,
+  IStore,
+} from '../domain/store/interfaces/store.interface';
+import { IParamsCreateStore } from '../domain/store/interfaces/store.service.interface';
 import { CategoryServiceFactory } from '../infrastructure/config/factories/category.service.factory';
 import { CouponServiceFactory } from '../infrastructure/config/factories/coupon.service.factory';
 import { CustomerServiceFactory } from '../infrastructure/config/factories/customer.service.factory';
@@ -16,14 +24,85 @@ import { ProductServiceFactory } from '../infrastructure/config/factories/produc
 import { StaffUserServiceFactory } from '../infrastructure/config/factories/staff-user.service.factory';
 import { StoreServiceFactory } from '../infrastructure/config/factories/store.service.factory';
 import { Mcoupon } from '../infrastructure/db/mongo/models/coupon.model';
+import { Mstore } from '../infrastructure/db/mongo/models/store.model';
 import { MstaffUser } from '../infrastructure/db/mongo/models/staff-user.model';
-import { CATALOG_SEED, OPTION_GROUPS_SEED } from './seed-data/catalog';
+import {
+  CATALOG_SEED,
+  ICategorySeed,
+  IOptionGroupSeed,
+  OPTION_GROUPS_SEED,
+} from './seed-data/catalog';
 import { couponsSeed } from './seed-data/coupons';
 import { DELIVERY_CITY_SEED, DELIVERY_ZONES_SEED } from './seed-data/delivery';
+import {
+  DRAFT_STAFF_USERS_SEED,
+  DRAFT_STORE_SEED,
+  PIZZERIA_CATALOG_SEED,
+  PIZZERIA_OPENING_HOURS_SEED,
+  PIZZERIA_OPTION_GROUPS_SEED,
+  PIZZERIA_STAFF_USERS_SEED,
+  PIZZERIA_STORE_SEED,
+  PIZZERIA_ZONES_SEED,
+  pizzeriaCouponsSeed,
+} from './seed-data/pizzeria';
 import { OPENING_HOURS_SEED, STORE_SEED } from './seed-data/store';
 import { DEMO_CUSTOMER_SEED, STAFF_USERS_SEED } from './seed-data/users';
 
 const PRODUCTS_PAGE = { limit: 1000, offset: 0 };
+const PROMOTION_DAYS = 30;
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+interface IStoreSeed {
+  store: IParamsCreateStore & { slug: string };
+  openingHours: IOpeningHour[];
+  optionGroups: IOptionGroupSeed[];
+  catalog: ICategorySeed[];
+  zones: [string, number, number, number][];
+  coupons: (now: Date) => Omit<IParamsCouponData, 'storeId'>[];
+  staffUsers: Omit<IParamsCreateStaffUser, 'storeId'>[];
+  featured?: string[];
+  promotions?: [string, number][];
+}
+
+const STORES_SEED: IStoreSeed[] = [
+  {
+    store: { ...STORE_SEED, isPublished: true },
+    openingHours: OPENING_HOURS_SEED,
+    optionGroups: OPTION_GROUPS_SEED,
+    catalog: CATALOG_SEED,
+    zones: DELIVERY_ZONES_SEED,
+    coupons: (now) =>
+      couponsSeed(now).map((coupon) => ({
+        ...coupon,
+        isPublic: coupon.code === 'BEMVINDO10',
+      })),
+    staffUsers: STAFF_USERS_SEED,
+    featured: ['Smash duplo', 'Combo casal', 'Milkshake de chocolate'],
+    promotions: [
+      ['Smash duplo', 2990],
+      ['Milkshake de Ovomaltine', 1590],
+    ],
+  },
+  {
+    store: { ...PIZZERIA_STORE_SEED, isPublished: true },
+    openingHours: PIZZERIA_OPENING_HOURS_SEED,
+    optionGroups: PIZZERIA_OPTION_GROUPS_SEED,
+    catalog: PIZZERIA_CATALOG_SEED,
+    zones: PIZZERIA_ZONES_SEED,
+    coupons: pizzeriaCouponsSeed,
+    staffUsers: PIZZERIA_STAFF_USERS_SEED,
+    featured: ['Margherita'],
+  },
+  {
+    store: DRAFT_STORE_SEED,
+    openingHours: [],
+    optionGroups: [],
+    catalog: [],
+    zones: [],
+    coupons: () => [],
+    staffUsers: DRAFT_STAFF_USERS_SEED,
+  },
+];
 
 export async function resetDatabase(): Promise<void> {
   await Promise.all(
@@ -34,27 +113,21 @@ export async function resetDatabase(): Promise<void> {
   Logger.warn('Database reset by the seed', { eventName: 'seed.reset' });
 }
 
-async function seedStore(): Promise<void> {
+async function seedStore({ store, openingHours }: IStoreSeed): Promise<IStore> {
   const storeService = StoreServiceFactory.create();
-  const store = await storeService.ensureDefaultStore();
-  const { slug, ...settings } = STORE_SEED;
-  await storeService.updateStore(store.id, {
-    ...settings,
-    ...(store.slug !== slug && { slug }),
-  });
-  await storeService.setOpeningHours(store.id, OPENING_HOURS_SEED);
+  const existing = await Mstore.findOne({ slug: store.slug }).lean<IStore>();
+  const saved = existing ?? (await storeService.createStore(store));
+  return storeService.setOpeningHours(saved.id, openingHours);
 }
 
-async function seedCatalog(): Promise<void> {
+async function seedCatalog(storeId: string, seed: IStoreSeed): Promise<void> {
   const categoryService = CategoryServiceFactory.create();
   const optionGroupService = OptionGroupServiceFactory.create();
   const productService = ProductServiceFactory.create();
-  const { id: storeId } =
-    await StoreServiceFactory.create().ensureDefaultStore();
 
   const existingGroups = await optionGroupService.listOptionGroups(storeId);
   const groupIds = new Map<string, string>();
-  for (const group of OPTION_GROUPS_SEED) {
+  for (const group of seed.optionGroups) {
     const existing = existingGroups.find(({ name }) => name === group.name);
     const saved =
       existing ??
@@ -74,7 +147,7 @@ async function seedCatalog(): Promise<void> {
     storeId,
     ...PRODUCTS_PAGE,
   });
-  for (const categorySeed of CATALOG_SEED) {
+  for (const categorySeed of seed.catalog) {
     const category =
       existingCategories.find(({ name }) => name === categorySeed.name) ??
       (await categoryService.createCategory({
@@ -105,11 +178,43 @@ async function seedCatalog(): Promise<void> {
   }
 }
 
-async function seedDeliveryZones(): Promise<void> {
+async function seedHighlights(
+  storeId: string,
+  seed: IStoreSeed,
+): Promise<void> {
+  const productService = ProductServiceFactory.create();
+  const { items: products } = await productService.listProducts({
+    storeId,
+    ...PRODUCTS_PAGE,
+  });
+  const byName = new Map(products.map((product) => [product.name, product]));
+  for (const name of seed.featured ?? []) {
+    await productService.setProductFeatured({
+      storeId,
+      id: byName.get(name)!.id,
+      isFeatured: true,
+    });
+  }
+  const now = Date.now();
+  for (const [name, priceInCents] of seed.promotions ?? []) {
+    await productService.setProductPromotion({
+      storeId,
+      id: byName.get(name)!.id,
+      promotion: {
+        priceInCents,
+        startsAt: new Date(now),
+        endsAt: new Date(now + PROMOTION_DAYS * MILLISECONDS_PER_DAY),
+      },
+    });
+  }
+}
+
+async function seedZonesCouponsAndStaff(
+  storeId: string,
+  seed: IStoreSeed,
+): Promise<void> {
   const deliveryZoneService = DeliveryZoneServiceFactory.create();
-  const { id: storeId } =
-    await StoreServiceFactory.create().ensureDefaultStore();
-  for (const [displayName, feeInCents, etaMin, etaMax] of DELIVERY_ZONES_SEED) {
+  for (const [displayName, feeInCents, etaMin, etaMax] of seed.zones) {
     const existing = await deliveryZoneService.resolveDeliveryZoneId(
       storeId,
       displayName,
@@ -127,121 +232,113 @@ async function seedDeliveryZones(): Promise<void> {
       });
     }
   }
-}
-
-async function seedCoupons(): Promise<void> {
   const couponService = CouponServiceFactory.create();
-  const { id: storeId } =
-    await StoreServiceFactory.create().ensureDefaultStore();
-  for (const coupon of couponsSeed(new Date())) {
+  for (const coupon of seed.coupons(new Date())) {
     if (!(await Mcoupon.exists({ storeId, code: coupon.code }))) {
-      await couponService.createCoupon({
-        ...coupon,
-        storeId,
-        isPublic: coupon.code === 'BEMVINDO10',
-      });
+      await couponService.createCoupon({ ...coupon, storeId });
     }
   }
-}
-
-async function seedStaffUsers(): Promise<void> {
   const staffUserService = StaffUserServiceFactory.create();
-  const store = await StoreServiceFactory.create().ensureDefaultStore();
-  for (const staffUser of STAFF_USERS_SEED) {
+  for (const staffUser of seed.staffUsers) {
     if (!(await MstaffUser.exists({ email: staffUser.email }))) {
-      await staffUserService.createStaffUser({
-        ...staffUser,
-        storeId: store.id,
-      });
+      await staffUserService.createStaffUser({ ...staffUser, storeId });
     }
   }
 }
 
-async function seedCustomerAndOrders(): Promise<void> {
-  const customerService = CustomerServiceFactory.create();
+async function placeOrder(
+  store: IStore,
+  customerId: string,
+  items: ICartItem[],
+  status: EOrderStatus,
+): Promise<void> {
   const orderService = OrderServiceFactory.create();
+  const order = await orderService.createOrder({
+    storeId: store.id,
+    customerId,
+    items,
+    fulfillmentType: EFulfillmentType.PICKUP,
+    paymentMethod: EPaymentMethod.CASH_ON_DELIVERY,
+  });
+  if (status === EOrderStatus.CANCELED) {
+    await orderService.cancelOrderByCustomer(order.id, customerId);
+    return;
+  }
+  const steps = [
+    EOrderStatus.PREPARING,
+    EOrderStatus.READY,
+    EOrderStatus.COMPLETED,
+  ];
+  for (const step of steps.slice(0, steps.indexOf(status) + 1)) {
+    await orderService.changeOrderStatus({
+      storeId: store.id,
+      orderId: order.id,
+      staffId: 'seed',
+      status: step,
+    });
+  }
+}
+
+async function seedCustomerAndOrders(stores: IStore[]): Promise<void> {
+  const customerService = CustomerServiceFactory.create();
   const { customer, isNew } =
     await customerService.findOrCreateCustomerByVerifiedPhone(
       DEMO_CUSTOMER_SEED.phone,
     );
-  if (isNew) {
-    await customerService.updateCustomerProfile({
-      customerId: customer.id,
-      name: DEMO_CUSTOMER_SEED.name,
-    });
-    await customerService.addAddress({
-      customerId: customer.id,
-      address: DEMO_CUSTOMER_SEED.address,
-    });
-  }
-  const { total } = await orderService.listOrdersForCustomer(customer.id, {
-    limit: 1,
-    offset: 0,
-  });
-  if (total > 0) {
+  if (!isNew) {
     return;
   }
-
-  const storeService = StoreServiceFactory.create();
-  const store = await storeService.ensureDefaultStore();
-  const { items: products } = await ProductServiceFactory.create().listProducts(
-    { storeId: store.id, search: 'Coca-Cola', ...PRODUCTS_PAGE },
-  );
-  const [address] = await customerService.listAddresses(customer.id);
-  const cart = {
-    storeId: store.id,
+  await customerService.updateCustomerProfile({
     customerId: customer.id,
-    items: [{ productId: products[0].id, quantity: 4, options: [] }],
-  };
-  await storeService.setManualStatus(store.id, EManualStatus.FORCED_OPEN);
-  try {
-    const completed = await orderService.createOrder({
-      ...cart,
-      fulfillmentType: EFulfillmentType.PICKUP,
-      paymentMethod: EPaymentMethod.CASH_ON_DELIVERY,
-    });
-    for (const status of [
-      EOrderStatus.PREPARING,
-      EOrderStatus.READY,
-      EOrderStatus.COMPLETED,
-    ]) {
-      await orderService.changeOrderStatus({
-        storeId: store.id,
-        orderId: completed.id,
-        staffId: 'seed',
-        status,
-      });
-    }
-    const canceled = await orderService.createOrder({
-      ...cart,
-      fulfillmentType: EFulfillmentType.PICKUP,
-      paymentMethod: EPaymentMethod.CARD_ON_DELIVERY,
-    });
-    await orderService.cancelOrderByCustomer(canceled.id, customer.id);
-    const preparing = await orderService.createOrder({
-      ...cart,
-      fulfillmentType: EFulfillmentType.DELIVERY,
-      addressId: address.id,
-      paymentMethod: EPaymentMethod.CASH_ON_DELIVERY,
-      changeForInCents: 10000,
-    });
-    await orderService.changeOrderStatus({
+    name: DEMO_CUSTOMER_SEED.name,
+  });
+  await customerService.addAddress({
+    customerId: customer.id,
+    address: DEMO_CUSTOMER_SEED.address,
+  });
+  const storeService = StoreServiceFactory.create();
+  const productService = ProductServiceFactory.create();
+  const orders: [string, EOrderStatus][][] = [
+    [
+      ['Brownie', EOrderStatus.COMPLETED],
+      ['Fritas com cheddar e bacon', EOrderStatus.COMPLETED],
+      ['Coca-Cola lata', EOrderStatus.COMPLETED],
+      ['Coca-Cola lata', EOrderStatus.CANCELED],
+      ['Cookie', EOrderStatus.PREPARING],
+    ],
+    [['Margherita', EOrderStatus.COMPLETED]],
+  ];
+  for (const [index, store] of stores.slice(0, orders.length).entries()) {
+    const { items: products } = await productService.listProducts({
       storeId: store.id,
-      orderId: preparing.id,
-      staffId: 'seed',
-      status: EOrderStatus.PREPARING,
+      ...PRODUCTS_PAGE,
     });
-  } finally {
-    await storeService.setManualStatus(store.id, EManualStatus.AUTO);
+    await storeService.setManualStatus(store.id, EManualStatus.FORCED_OPEN);
+    try {
+      for (const [name, status] of orders[index]) {
+        const product = products.find((candidate) => candidate.name === name)!;
+        await placeOrder(
+          store,
+          customer.id,
+          [{ productId: product.id, quantity: 2, options: [] }],
+          status,
+        );
+      }
+    } finally {
+      await storeService.setManualStatus(store.id, EManualStatus.AUTO);
+    }
   }
 }
 
 export async function runSeed(): Promise<void> {
-  await seedStore();
-  await seedCatalog();
-  await seedDeliveryZones();
-  await seedCoupons();
-  await seedStaffUsers();
-  await seedCustomerAndOrders();
+  const stores: IStore[] = [];
+  for (const seed of STORES_SEED) {
+    const store = await seedStore(seed);
+    await seedCatalog(store.id, seed);
+    await seedHighlights(store.id, seed);
+    await seedZonesCouponsAndStaff(store.id, seed);
+    stores.push(store);
+  }
+  await seedCustomerAndOrders(stores);
   Logger.info('Seed finished', { eventName: 'seed.finished' });
 }
