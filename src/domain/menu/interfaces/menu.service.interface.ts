@@ -1,3 +1,4 @@
+import { IClock } from '../../common/clock.interface';
 import { IStoreService } from '../../store/interfaces/store.service.interface';
 import { ICategoryService } from '../../category/interfaces/category.service.interface';
 import { IOptionGroupService } from '../../option-group/interfaces/option-group.service.interface';
@@ -9,6 +10,7 @@ export interface IParamsMenuService {
   categoryService: ICategoryService;
   productService: IProductService;
   optionGroupService: IOptionGroupService;
+  clock: IClock;
 }
 
 export interface IMenuService {

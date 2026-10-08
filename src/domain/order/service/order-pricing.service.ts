@@ -1,4 +1,5 @@
 import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
+import { IClock } from '../../common/clock.interface';
 import { IPostalAddress } from '../../common/postal-address.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
 import { Customer } from '../../customer/customer.entity';
@@ -33,6 +34,7 @@ export class OrderPricingService implements IOrderPricingService {
   private productService: IProductService;
   private optionGroupService: IOptionGroupService;
   private couponService: ICouponService;
+  private clock: IClock;
 
   constructor({
     storeService,
@@ -41,6 +43,7 @@ export class OrderPricingService implements IOrderPricingService {
     productService,
     optionGroupService,
     couponService,
+    clock,
   }: IParamsOrderPricingService) {
     this.storeService = storeService;
     this.customerService = customerService;
@@ -48,6 +51,7 @@ export class OrderPricingService implements IOrderPricingService {
     this.productService = productService;
     this.optionGroupService = optionGroupService;
     this.couponService = couponService;
+    this.clock = clock;
   }
 
   @ErrorHandler()
@@ -203,7 +207,7 @@ export class OrderPricingService implements IOrderPricingService {
       storeId,
       groupIds,
     );
-    return buildOrderItems(items, products, optionGroups);
+    return buildOrderItems(items, products, optionGroups, this.clock.now());
   }
 
   private assertValidChange(

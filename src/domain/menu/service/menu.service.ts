@@ -1,3 +1,4 @@
+import { IClock } from '../../common/clock.interface';
 import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
 import { ICategoryService } from '../../category/interfaces/category.service.interface';
 import { IStoreService } from '../../store/interfaces/store.service.interface';
@@ -18,17 +19,20 @@ export class MenuService implements IMenuService {
   private categoryService: ICategoryService;
   private productService: IProductService;
   private optionGroupService: IOptionGroupService;
+  private clock: IClock;
 
   constructor({
     storeService,
     categoryService,
     productService,
     optionGroupService,
+    clock,
   }: IParamsMenuService) {
     this.storeService = storeService;
     this.categoryService = categoryService;
     this.productService = productService;
     this.optionGroupService = optionGroupService;
+    this.clock = clock;
   }
 
   @ErrorHandler()
@@ -48,7 +52,9 @@ export class MenuService implements IMenuService {
           name: category.name,
           products: products
             .filter(({ categoryId }) => categoryId === category.id)
-            .map((product) => toMenuProduct(product, optionGroupsById)),
+            .map((product) =>
+              toMenuProduct(product, optionGroupsById, this.clock.now()),
+            ),
         }))
         .filter(({ products: categoryProducts }) => categoryProducts.length > 0),
     };
@@ -75,6 +81,7 @@ export class MenuService implements IMenuService {
     return toMenuProduct(
       product,
       await this.optionGroupsFor(storeId, [product]),
+      this.clock.now(),
     );
   }
 

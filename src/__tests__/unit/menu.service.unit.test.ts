@@ -6,6 +6,7 @@ import { ICategory } from '../../domain/category/interfaces/category.interface';
 import { IProduct } from '../../domain/product/interfaces/product.interface';
 import { IOptionGroup } from '../../domain/option-group/interfaces/option-group.interface';
 import { NotFoundError } from '../../domain/errors/not-found.error';
+import { FixedClock } from '../helpers/fixed.clock';
 import { IStoreService } from '../../domain/store/interfaces/store.service.interface';
 
 const NOW = new Date('2026-10-01T12:00:00Z');
@@ -97,6 +98,7 @@ beforeEach(() => {
     categoryService: categoryService as unknown as ICategoryService,
     productService: productService as unknown as IProductService,
     optionGroupService: optionGroupService as unknown as IOptionGroupService,
+    clock: new FixedClock('2026-10-01T12:00:00Z'),
   });
 });
 

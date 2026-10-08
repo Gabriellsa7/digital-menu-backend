@@ -5,6 +5,12 @@ export type IMenuOptionGroup = Omit<
   'storeId' | 'createdAt' | 'updatedAt'
 >;
 
+export interface IMenuPromotion {
+  priceInCents: number;
+  endsAt: Date;
+  discountPercent: number;
+}
+
 export interface IMenuProduct {
   id: string;
   name: string;
@@ -14,6 +20,8 @@ export interface IMenuProduct {
   imageUrl?: string;
   isAvailable: boolean;
   servesPeople?: number;
+  promotion?: IMenuPromotion;
+  isNew: boolean;
   optionGroups: IMenuOptionGroup[];
 }
 

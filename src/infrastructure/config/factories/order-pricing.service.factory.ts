@@ -4,6 +4,7 @@ import { CustomerServiceFactory } from './customer.service.factory';
 import { DeliveryZoneServiceFactory } from './delivery-zone.service.factory';
 import { OptionGroupServiceFactory } from './option-group.service.factory';
 import { ProductServiceFactory } from './product.service.factory';
+import { SystemClock } from '../../common/system.clock';
 import { StoreServiceFactory } from './store.service.factory';
 
 export class OrderPricingServiceFactory {
@@ -15,6 +16,7 @@ export class OrderPricingServiceFactory {
       productService: ProductServiceFactory.create(),
       optionGroupService: OptionGroupServiceFactory.create(),
       couponService: CouponServiceFactory.create(),
+      clock: new SystemClock(),
     });
   }
 }

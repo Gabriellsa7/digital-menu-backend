@@ -1,3 +1,4 @@
+import { IClock } from '../../common/clock.interface';
 import { IPostalAddress } from '../../common/postal-address.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
 import { ICustomerService } from '../../customer/interfaces/customer.service.interface';
@@ -60,6 +61,7 @@ export interface IParamsOrderPricingService {
   productService: IProductService;
   optionGroupService: IOptionGroupService;
   couponService: ICouponService;
+  clock: IClock;
 }
 
 export interface IOrderPricingService {

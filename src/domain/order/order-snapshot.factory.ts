@@ -1,5 +1,6 @@
 import { BusinessRuleError } from '../errors/business-rule.error';
 import { IOptionGroup } from '../option-group/interfaces/option-group.interface';
+import { effectivePriceInCents } from '../product/product-pricing';
 import { IProduct } from '../product/interfaces/product.interface';
 import {
   ICartItem,
@@ -59,6 +60,7 @@ function buildOrderItem(
   item: ICartItem,
   product: IProduct | undefined,
   groupsById: Map<string, IOptionGroup>,
+  now: Date,
 ): IOrderItem {
   if (!product || !product.isActive || !product.isAvailable) {
     throw new BusinessRuleError(
@@ -83,14 +85,18 @@ function buildOrderItem(
         )
       : [];
   });
+  const basePriceInCents = effectivePriceInCents(product, now);
   const unitPriceInCents = options.reduce(
     (total, option) => total + option.priceInCents * option.quantity,
-    product.priceInCents,
+    basePriceInCents,
   );
   return {
     productId: product.id,
     name: product.name,
     ...(product.imageUrl && { imageUrl: product.imageUrl }),
+    ...(basePriceInCents !== product.priceInCents && {
+      listPriceInCents: product.priceInCents,
+    }),
     unitPriceInCents,
     quantity: item.quantity,
     options,
@@ -125,10 +131,11 @@ export function buildOrderItems(
   items: ICartItem[],
   products: IProduct[],
   optionGroups: IOptionGroup[],
+  now: Date,
 ): IOrderItem[] {
   const productsById = new Map(products.map((product) => [product.id, product]));
   const groupsById = new Map(optionGroups.map((group) => [group.id, group]));
   return items.map((item) =>
-    buildOrderItem(item, productsById.get(item.productId), groupsById),
+    buildOrderItem(item, productsById.get(item.productId), groupsById, now),
   );
 }
