@@ -31,7 +31,7 @@ export class StoreController implements IController {
 
   initRoutes() {
     const { staff, owner } = createAuthGuards(this.tokenService);
-    this.router.get('/public/store', this.getPublicStore);
+    this.router.get('/public/stores/:slug', this.getPublicStore);
     this.router.get('/admin/store', ...staff, this.getStore);
     this.router.put('/admin/store', ...owner, this.updateStore);
     this.router.put(
@@ -49,14 +49,13 @@ export class StoreController implements IController {
   }
 
   getPublicStore = async (
-    _req: Request,
+    req: Request<{ slug: string }>,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const store = await this.storeService.ensureDefaultStore();
-      const storeWithStatus = await this.storeService.getStoreWithStatus(
-        store.id,
+      const storeWithStatus = await this.storeService.getPublishedStoreBySlug(
+        req.params.slug,
       );
       res.status(200).json(toStoreResponse(storeWithStatus));
     } catch (error) {

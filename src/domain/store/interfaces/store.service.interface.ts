@@ -55,6 +55,7 @@ export interface IStoreService {
   ensureDefaultStore(): Promise<IStore>;
   getStore(storeId: string): Promise<IStore>;
   getStoreWithStatus(storeId: string): Promise<IStoreWithStatus>;
+  getPublishedStoreBySlug(slug: string): Promise<IStoreWithStatus>;
   listActiveStores(): Promise<IStore[]>;
   updateStore(storeId: string, params: IParamsUpdateStore): Promise<IStore>;
   setOpeningHours(

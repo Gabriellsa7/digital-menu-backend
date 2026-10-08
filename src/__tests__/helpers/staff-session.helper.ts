@@ -7,10 +7,20 @@ import { StoreServiceFactory } from '../../infrastructure/config/factories/store
 
 export const STAFF_PASSWORD = 'secret123';
 
-export async function createStaffUser(role = EStaffRole.STAFF) {
-  const store = await StoreServiceFactory.create().ensureDefaultStore();
+async function defaultStoreId(): Promise<string> {
+  return (await StoreServiceFactory.create().ensureDefaultStore()).id;
+}
+
+export async function createStore(name = `Store ${randomUUID()}`) {
+  return StoreServiceFactory.create().createStore({ name, isPublished: true });
+}
+
+export async function createStaffUser(
+  role = EStaffRole.STAFF,
+  storeId?: string,
+) {
   return StaffUserServiceFactory.create().createStaffUser({
-    storeId: store.id,
+    storeId: storeId ?? (await defaultStoreId()),
     name: `${role} user`,
     email: `${randomUUID()}@menu.dev`,
     password: STAFF_PASSWORD,
@@ -18,8 +28,8 @@ export async function createStaffUser(role = EStaffRole.STAFF) {
   });
 }
 
-export async function loginAs(role = EStaffRole.STAFF) {
-  const staffUser = await createStaffUser(role);
+export async function loginAs(role = EStaffRole.STAFF, storeId?: string) {
+  const staffUser = await createStaffUser(role, storeId);
   const response = await supertest(app.app)
     .post('/auth/staff/login')
     .send({ email: staffUser.email, password: STAFF_PASSWORD });
