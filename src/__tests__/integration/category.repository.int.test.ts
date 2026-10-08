@@ -6,10 +6,11 @@ import { CategoryRepositoryWrite } from '../../infrastructure/repository/categor
 const categoryRepositoryRead = new CategoryRepositoryRead();
 const categoryRepositoryWrite = new CategoryRepositoryWrite();
 
-function createCategory(name: string, position: number) {
+function createCategory(name: string, position: number, storeId = 'store-1') {
   const now = new Date();
   return categoryRepositoryWrite.createCategory({
     id: randomUUID(),
+    storeId,
     name,
     position,
     isActive: true,
@@ -27,7 +28,10 @@ describe('When we persist categories', () => {
   it('should find a category by name ignoring casing and accents', async () => {
     await createCategory('Sobremesas', 0);
 
-    const found = await categoryRepositoryRead.findCategoryByName('SOBREMESAS');
+    const found = await categoryRepositoryRead.findCategoryByName(
+      'store-1',
+      'SOBREMESAS',
+    );
 
     expect(found?.name).toBe('Sobremesas');
   });
@@ -38,16 +42,28 @@ describe('When we persist categories', () => {
     await expect(createCategory('BEBIDAS', 1)).rejects.toThrow(/duplicate key/);
   });
 
+  it('should allow the same name in another store (CAT-R01)', async () => {
+    await createCategory('Bebidas', 0, 'store-1');
+    await createCategory('Bebidas', 0, 'store-2');
+
+    const listed = await categoryRepositoryRead.listCategories('store-2');
+
+    expect(listed).toHaveLength(1);
+    await expect(
+      categoryRepositoryRead.findCategoryByName('store-3', 'Bebidas'),
+    ).resolves.toBeNull();
+  });
+
   it('should rewrite positions 0..n on reorder (CAT-R03)', async () => {
     const first = await createCategory('Burgers', 0);
     const second = await createCategory('Bebidas', 5);
-    await expect(categoryRepositoryRead.findMaxCategoryPosition()).resolves.toBe(
+    await expect(categoryRepositoryRead.findMaxCategoryPosition('store-1')).resolves.toBe(
       5,
     );
 
     await categoryRepositoryWrite.reorderCategories([second.id, first.id]);
 
-    const listed = await categoryRepositoryRead.listCategories();
+    const listed = await categoryRepositoryRead.listCategories('store-1');
     expect(listed.map(({ name, position }) => ({ name, position }))).toEqual([
       { name: 'Bebidas', position: 0 },
       { name: 'Burgers', position: 1 },

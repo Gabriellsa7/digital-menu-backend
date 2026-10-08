@@ -6,12 +6,14 @@ import { ICategory } from '../../domain/category/interfaces/category.interface';
 import { IProduct } from '../../domain/product/interfaces/product.interface';
 import { IOptionGroup } from '../../domain/option-group/interfaces/option-group.interface';
 import { NotFoundError } from '../../domain/errors/not-found.error';
+import { IStoreService } from '../../domain/store/interfaces/store.service.interface';
 
 const NOW = new Date('2026-10-01T12:00:00Z');
 
 function aCategory(id: string, overrides: Partial<ICategory> = {}): ICategory {
   return {
     id,
+    storeId: 'store-1',
     name: id,
     position: 0,
     isActive: true,
@@ -24,6 +26,7 @@ function aCategory(id: string, overrides: Partial<ICategory> = {}): ICategory {
 function aProduct(id: string, overrides: Partial<IProduct> = {}): IProduct {
   return {
     id,
+    storeId: 'store-1',
     categoryId: 'burgers',
     name: id,
     description: '',
@@ -84,6 +87,11 @@ beforeEach(() => {
   };
   optionGroupService = { findOptionGroupsByIds: jest.fn().mockResolvedValue([]) };
   menuService = new MenuService({
+    storeService: {
+      getPublishedStoreBySlug: jest
+        .fn()
+        .mockResolvedValue({ store: { id: 'store-1' } }),
+    } as unknown as IStoreService,
     categoryService: categoryService as unknown as ICategoryService,
     productService: productService as unknown as IProductService,
     optionGroupService: optionGroupService as unknown as IOptionGroupService,
@@ -97,8 +105,10 @@ describe('When we build the public menu (PRD-R05)', () => {
       aProduct('secret', { categoryId: 'hidden' }),
     ]);
 
-    const menu = await menuService.getMenu();
+    const menu = await menuService.getMenu('casa-brasa');
 
+    expect(categoryService.listCategories).toHaveBeenCalledWith('store-1');
+    expect(productService.listActiveProducts).toHaveBeenCalledWith('store-1');
     expect(menu.categories).toHaveLength(1);
     expect(menu.categories[0]).toMatchObject({
       id: 'burgers',
@@ -115,7 +125,7 @@ describe('When we build the public menu (PRD-R05)', () => {
       aGroup('sauce'),
     ]);
 
-    const menu = await menuService.getMenu();
+    const menu = await menuService.getMenu('casa-brasa');
 
     expect(
       menu.categories[0].products[0].optionGroups.map(({ id }) => id),
@@ -142,7 +152,7 @@ describe('When we compute the "a partir de" price', () => {
     );
     optionGroupService.findOptionGroupsByIds.mockResolvedValue([group]);
 
-    const product = await menuService.getMenuProduct('smash');
+    const product = await menuService.getMenuProduct('casa-brasa', 'smash');
 
     expect(product.fromPriceInCents).toBe(expected);
   });
@@ -158,8 +168,8 @@ describe('When we read a single menu product', () => {
       aCategory('burgers', { isActive: isCategoryActive }),
     );
 
-    await expect(menuService.getMenuProduct('smash')).rejects.toThrow(
-      NotFoundError,
-    );
+    await expect(
+      menuService.getMenuProduct('casa-brasa', 'smash'),
+    ).rejects.toThrow(NotFoundError);
   });
 });

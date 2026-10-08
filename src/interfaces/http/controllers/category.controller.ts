@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { IController } from './controller.interface';
 import { ITokenService } from '../../../domain/auth/interfaces/token.service.interface';
 import { ICategoryService } from '../../../domain/category/interfaces/category.service.interface';
-import { createAuthGuards } from '../middlewares/auth-guards';
+import { createAuthGuards, staffStoreId } from '../middlewares/auth-guards';
 import { toCategoryResponse } from '../presenters/category.presenter';
 
 type TIdParams = { id: string };
@@ -34,12 +34,14 @@ export class CategoryController implements IController {
   }
 
   list = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const categories = await this.categoryService.listCategories();
+      const categories = await this.categoryService.listCategories(
+        staffStoreId(req),
+      );
       res.status(200).json(categories.map(toCategoryResponse));
     } catch (error) {
       next(error);
@@ -53,6 +55,7 @@ export class CategoryController implements IController {
   ): Promise<void> => {
     try {
       const category = await this.categoryService.createCategory({
+        storeId: staffStoreId(req),
         name: req.body.name,
         isActive: req.body.isActive,
       });
@@ -69,6 +72,7 @@ export class CategoryController implements IController {
   ): Promise<void> => {
     try {
       const category = await this.categoryService.updateCategory({
+        storeId: staffStoreId(req),
         id: req.params.id,
         name: req.body.name,
         isActive: req.body.isActive,
@@ -85,7 +89,10 @@ export class CategoryController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      await this.categoryService.deleteCategory(req.params.id);
+      await this.categoryService.deleteCategory(
+        staffStoreId(req),
+        req.params.id,
+      );
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -99,6 +106,7 @@ export class CategoryController implements IController {
   ): Promise<void> => {
     try {
       const categories = await this.categoryService.reorderCategories(
+        staffStoreId(req),
         req.body.ids,
       );
       res.status(200).json(categories.map(toCategoryResponse));

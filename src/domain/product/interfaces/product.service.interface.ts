@@ -15,6 +15,7 @@ import { IProductRepositoryWrite } from '../repository/product.repository.write'
 import { IProduct } from './product.interface';
 
 export interface IParamsProductData {
+  storeId: string;
   categoryId: string;
   name: string;
   description: string;
@@ -30,6 +31,7 @@ export interface IParamsUpdateProduct extends IParamsProductData {
 }
 
 export interface IParamsSetProductAvailability {
+  storeId: string;
   id: string;
   isAvailable: boolean;
 }
@@ -46,19 +48,24 @@ export interface IParamsProductService {
 
 export interface IProductService {
   listProducts(params: IParamsListProducts): Promise<IPaginatedResult<IProduct>>;
-  getProductById(id: string): Promise<IProduct>;
-  listActiveProducts(): Promise<IProduct[]>;
-  findProductsByIds(ids: string[]): Promise<IProduct[]>;
+  getProductById(storeId: string, id: string): Promise<IProduct>;
+  listActiveProducts(storeId: string): Promise<IProduct[]>;
+  findProductsByIds(storeId: string, ids: string[]): Promise<IProduct[]>;
   createProduct(params: IParamsProductData): Promise<IProduct>;
   updateProduct(params: IParamsUpdateProduct): Promise<IProduct>;
-  deleteProduct(id: string): Promise<void>;
+  deleteProduct(storeId: string, id: string): Promise<void>;
   setProductAvailability(
     params: IParamsSetProductAvailability,
   ): Promise<IProduct>;
   reorderProductsInCategory(
+    storeId: string,
     categoryId: string,
     orderedIds: string[],
   ): Promise<IProduct[]>;
-  setProductImage(id: string, file?: IImageFile): Promise<IProduct>;
-  removeProductImage(id: string): Promise<IProduct>;
+  setProductImage(
+    storeId: string,
+    id: string,
+    file?: IImageFile,
+  ): Promise<IProduct>;
+  removeProductImage(storeId: string, id: string): Promise<IProduct>;
 }

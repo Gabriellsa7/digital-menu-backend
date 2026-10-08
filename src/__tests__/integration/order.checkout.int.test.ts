@@ -122,6 +122,7 @@ describe('When a customer places an order', () => {
       'the product is sold out (ORD-R05)',
       async () =>
         ProductServiceFactory.create().setProductAvailability({
+          storeId: checkout.storeId,
           id: checkout.smash.id,
           isAvailable: false,
         }),

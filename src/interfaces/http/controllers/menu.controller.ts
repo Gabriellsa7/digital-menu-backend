@@ -19,17 +19,17 @@ export class MenuController implements IController {
   }
 
   initRoutes() {
-    this.router.get('/public/menu', this.getMenu);
-    this.router.get('/public/products/:id', this.getProduct);
+    this.router.get('/public/stores/:slug/menu', this.getMenu);
+    this.router.get('/public/stores/:slug/products/:id', this.getProduct);
   }
 
   getMenu = async (
-    _req: Request,
+    req: Request<{ slug: string }>,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const menu = await this.menuService.getMenu();
+      const menu = await this.menuService.getMenu(req.params.slug);
       res.set('Cache-Control', PUBLIC_CACHE_CONTROL).status(200).json(menu);
     } catch (error) {
       next(error);
@@ -37,12 +37,15 @@ export class MenuController implements IController {
   };
 
   getProduct = async (
-    req: Request<{ id: string }>,
+    req: Request<{ slug: string; id: string }>,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const product = await this.menuService.getMenuProduct(req.params.id);
+      const product = await this.menuService.getMenuProduct(
+        req.params.slug,
+        req.params.id,
+      );
       res.set('Cache-Control', PUBLIC_CACHE_CONTROL).status(200).json(product);
     } catch (error) {
       next(error);

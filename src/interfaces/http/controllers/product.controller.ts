@@ -5,7 +5,7 @@ import {
   IParamsProductData,
   IProductService,
 } from '../../../domain/product/interfaces/product.service.interface';
-import { createAuthGuards } from '../middlewares/auth-guards';
+import { createAuthGuards, staffStoreId } from '../middlewares/auth-guards';
 import {
   imageUpload,
   uploadedImage,
@@ -68,6 +68,7 @@ export class ProductController implements IController {
       const page = Number(req.query.page ?? 1);
       const limit = Number(req.query.limit ?? DEFAULT_PAGE_SIZE);
       const { items, total } = await this.productService.listProducts({
+        storeId: staffStoreId(req),
         categoryId: req.query.categoryId as string | undefined,
         search: req.query.search as string | undefined,
         limit,
@@ -87,7 +88,10 @@ export class ProductController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const product = await this.productService.getProductById(req.params.id);
+      const product = await this.productService.getProductById(
+        staffStoreId(req),
+        req.params.id,
+      );
       res.status(200).json(toProductResponse(product));
     } catch (error) {
       next(error);
@@ -101,7 +105,7 @@ export class ProductController implements IController {
   ): Promise<void> => {
     try {
       const product = await this.productService.createProduct(
-        this.productData(req.body),
+        this.productData(req),
       );
       res.status(201).json(toProductResponse(product));
     } catch (error) {
@@ -117,7 +121,7 @@ export class ProductController implements IController {
     try {
       const product = await this.productService.updateProduct({
         id: req.params.id,
-        ...this.productData(req.body),
+        ...this.productData(req),
       });
       res.status(200).json(toProductResponse(product));
     } catch (error) {
@@ -131,7 +135,10 @@ export class ProductController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      await this.productService.deleteProduct(req.params.id);
+      await this.productService.deleteProduct(
+        staffStoreId(req),
+        req.params.id,
+      );
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -145,6 +152,7 @@ export class ProductController implements IController {
   ): Promise<void> => {
     try {
       const product = await this.productService.setProductAvailability({
+        storeId: staffStoreId(req),
         id: req.params.id,
         isAvailable: req.body.isAvailable,
       });
@@ -161,6 +169,7 @@ export class ProductController implements IController {
   ): Promise<void> => {
     try {
       const products = await this.productService.reorderProductsInCategory(
+        staffStoreId(req),
         req.params.id,
         req.body.ids,
       );
@@ -177,6 +186,7 @@ export class ProductController implements IController {
   ): Promise<void> => {
     try {
       const product = await this.productService.setProductImage(
+        staffStoreId(req),
         req.params.id,
         uploadedImage(req),
       );
@@ -193,6 +203,7 @@ export class ProductController implements IController {
   ): Promise<void> => {
     try {
       const product = await this.productService.removeProductImage(
+        staffStoreId(req),
         req.params.id,
       );
       res.status(200).json(toProductResponse(product));
@@ -205,8 +216,10 @@ export class ProductController implements IController {
     return this.router;
   }
 
-  private productData(body: IParamsProductData): IParamsProductData {
+  private productData(req: Request): IParamsProductData {
+    const body: IParamsProductData = req.body;
     return {
+      storeId: staffStoreId(req),
       categoryId: body.categoryId,
       name: body.name,
       description: body.description ?? '',

@@ -31,7 +31,7 @@ import {
   IProductRepositoryWrite,
 } from '../repository/product.repository.write';
 
-const PRODUCT_IMAGES_FOLDER = 'digital-menu/products';
+const PRODUCT_IMAGES_FOLDER = 'digital-menu/stores';
 
 export class ProductService implements IProductService {
   private productRepositoryRead: IProductRepositoryRead;
@@ -68,23 +68,28 @@ export class ProductService implements IProductService {
   }
 
   @ErrorHandler()
-  async getProductById(id: string): Promise<IProduct> {
+  async getProductById(storeId: string, id: string): Promise<IProduct> {
     const product = await this.productRepositoryRead.findProductById(id);
 
-    return product ? product : this.throwProductNotFound();
+    return product?.storeId === storeId
+      ? product
+      : this.throwProductNotFound();
   }
 
   @ErrorHandler()
-  async listActiveProducts(): Promise<IProduct[]> {
-    return this.productRepositoryRead.listActiveProducts();
+  async listActiveProducts(storeId: string): Promise<IProduct[]> {
+    return this.productRepositoryRead.listActiveProducts(storeId);
   }
 
   @ErrorHandler()
-  async findProductsByIds(ids: string[]): Promise<IProduct[]> {
+  async findProductsByIds(
+    storeId: string,
+    ids: string[],
+  ): Promise<IProduct[]> {
     if (ids.length === 0) {
       return [];
     }
-    return this.productRepositoryRead.findProductsByIds(ids);
+    return this.productRepositoryRead.findProductsByIds(storeId, ids);
   }
 
   @ErrorHandler()
@@ -108,7 +113,7 @@ export class ProductService implements IProductService {
     servesPeople,
     ...params
   }: IParamsUpdateProduct): Promise<IProduct> {
-    const current = await this.getProductById(id);
+    const current = await this.getProductById(params.storeId, id);
     const position =
       current.categoryId === params.categoryId
         ? current.position
@@ -138,8 +143,8 @@ export class ProductService implements IProductService {
   }
 
   @ErrorHandler()
-  async deleteProduct(id: string): Promise<void> {
-    const product = await this.getProductById(id);
+  async deleteProduct(storeId: string, id: string): Promise<void> {
+    const product = await this.getProductById(storeId, id);
     const deleted = await this.productRepositoryWrite.deleteProductById(id);
     if (!deleted) {
       this.throwProductNotFound();
@@ -149,9 +154,11 @@ export class ProductService implements IProductService {
 
   @ErrorHandler()
   async setProductAvailability({
+    storeId,
     id,
     isAvailable,
   }: IParamsSetProductAvailability): Promise<IProduct> {
+    await this.getProductById(storeId, id);
     const product = await this.updateProductFields(id, {
       set: { isAvailable },
     });
@@ -161,10 +168,11 @@ export class ProductService implements IProductService {
 
   @ErrorHandler()
   async reorderProductsInCategory(
+    storeId: string,
     categoryId: string,
     orderedIds: string[],
   ): Promise<IProduct[]> {
-    await this.categoryService.getCategoryById(categoryId);
+    await this.categoryService.getCategoryById(storeId, categoryId);
     const products =
       await this.productRepositoryRead.listProductsInCategory(categoryId);
     assertCompleteOrder(
@@ -180,12 +188,16 @@ export class ProductService implements IProductService {
   }
 
   @ErrorHandler()
-  async setProductImage(id: string, file?: IImageFile): Promise<IProduct> {
+  async setProductImage(
+    storeId: string,
+    id: string,
+    file?: IImageFile,
+  ): Promise<IProduct> {
     assertValidImage(file);
-    const product = await this.getProductById(id);
+    const product = await this.getProductById(storeId, id);
     const uploaded = await this.storageProvider.uploadImage({
       file,
-      folder: PRODUCT_IMAGES_FOLDER,
+      folder: `${PRODUCT_IMAGES_FOLDER}/${storeId}/products`,
     });
 
     const updated = await this.updateProductFields(id, {
@@ -196,8 +208,8 @@ export class ProductService implements IProductService {
   }
 
   @ErrorHandler()
-  async removeProductImage(id: string): Promise<IProduct> {
-    const product = await this.getProductById(id);
+  async removeProductImage(storeId: string, id: string): Promise<IProduct> {
+    const product = await this.getProductById(storeId, id);
     const updated = await this.updateProductFields(id, {
       unset: ['imageUrl', 'imagePublicId'],
     });
@@ -212,7 +224,10 @@ export class ProductService implements IProductService {
   }
 
   private async assertValidProduct(product: Product): Promise<void> {
-    await this.categoryService.getCategoryById(product.categoryId);
+    await this.categoryService.getCategoryById(
+      product.storeId,
+      product.categoryId,
+    );
     const optionGroups = await this.findOptionGroupsOrThrow(
       product.optionGroupIds,
     );

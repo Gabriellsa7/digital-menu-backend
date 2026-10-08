@@ -12,20 +12,23 @@ export class CategoryRepositoryRead implements ICategoryRepositoryRead {
     ).lean<ICategory>();
   }
 
-  async findCategoryByName(name: string): Promise<ICategory | null> {
-    return Mcategory.findOne({ name }, HIDE_MONGO_INTERNAL_FIELDS)
+  async findCategoryByName(
+    storeId: string,
+    name: string,
+  ): Promise<ICategory | null> {
+    return Mcategory.findOne({ storeId, name }, HIDE_MONGO_INTERNAL_FIELDS)
       .collation(CASE_INSENSITIVE_COLLATION)
       .lean<ICategory>();
   }
 
-  async listCategories(): Promise<ICategory[]> {
-    return Mcategory.find({}, HIDE_MONGO_INTERNAL_FIELDS)
+  async listCategories(storeId: string): Promise<ICategory[]> {
+    return Mcategory.find({ storeId }, HIDE_MONGO_INTERNAL_FIELDS)
       .sort({ position: 1, createdAt: 1 })
       .lean<ICategory[]>();
   }
 
-  async findMaxCategoryPosition(): Promise<number> {
-    const last = await Mcategory.findOne({}, { position: 1 })
+  async findMaxCategoryPosition(storeId: string): Promise<number> {
+    const last = await Mcategory.findOne({ storeId }, { position: 1 })
       .sort({ position: -1 })
       .lean<Pick<ICategory, 'position'>>();
     return last?.position ?? -1;

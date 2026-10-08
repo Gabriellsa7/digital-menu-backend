@@ -30,6 +30,7 @@ export function aStoreFixture(overrides: Partial<IStore> = {}): IStore {
 export function aCategoryFixture(overrides: Partial<ICategory> = {}): ICategory {
   return {
     id: 'burgers',
+    storeId: 'store-1',
     name: 'Burgers',
     position: 0,
     isActive: true,
@@ -75,6 +76,7 @@ export function aBreadGroupFixture(): IOptionGroup {
 export function aProductFixture(overrides: Partial<IProduct> = {}): IProduct {
   return {
     id: 'smash',
+    storeId: 'store-1',
     categoryId: 'burgers',
     name: 'Smash',
     description: '',

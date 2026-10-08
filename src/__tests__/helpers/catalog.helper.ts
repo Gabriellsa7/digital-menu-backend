@@ -4,6 +4,7 @@ import { IParamsProductData } from '../../domain/product/interfaces/product.serv
 import { CategoryServiceFactory } from '../../infrastructure/config/factories/category.service.factory';
 import { OptionGroupServiceFactory } from '../../infrastructure/config/factories/option-group.service.factory';
 import { ProductServiceFactory } from '../../infrastructure/config/factories/product.service.factory';
+import { StoreServiceFactory } from '../../infrastructure/config/factories/store.service.factory';
 import { Mcategory } from '../../infrastructure/db/mongo/models/category.model';
 import { MoptionGroup } from '../../infrastructure/db/mongo/models/option-group.model';
 import { Mproduct } from '../../infrastructure/db/mongo/models/product.model';
@@ -16,8 +17,18 @@ export async function clearCatalog() {
   ]);
 }
 
-export function createCategory(name = `Category ${randomUUID()}`) {
-  return CategoryServiceFactory.create().createCategory({ name });
+export async function defaultStoreId(): Promise<string> {
+  return (await StoreServiceFactory.create().ensureDefaultStore()).id;
+}
+
+export async function createCategory(
+  name = `Category ${randomUUID()}`,
+  storeId?: string,
+) {
+  return CategoryServiceFactory.create().createCategory({
+    storeId: storeId ?? (await defaultStoreId()),
+    name,
+  });
 }
 
 export function createOptionGroup(
@@ -36,11 +47,12 @@ export function createOptionGroup(
   });
 }
 
-export function createProduct(
+export async function createProduct(
   categoryId: string,
   overrides: Partial<IParamsProductData> = {},
 ) {
   return ProductServiceFactory.create().createProduct({
+    storeId: await defaultStoreId(),
     categoryId,
     name: 'Smash burger',
     description: 'Two patties',

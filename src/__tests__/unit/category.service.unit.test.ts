@@ -8,10 +8,12 @@ import { NotFoundError } from '../../domain/errors/not-found.error';
 import { FixedClock } from '../helpers/fixed.clock';
 
 const clock = new FixedClock();
+const STORE_ID = 'store-1';
 
 function aCategory(overrides: Partial<ICategory> = {}): ICategory {
   return {
     id: 'category-1',
+    storeId: STORE_ID,
     name: 'Burgers',
     position: 0,
     isActive: true,
@@ -56,6 +58,7 @@ describe('When we create a category', () => {
     categoryRepositoryRead.findMaxCategoryPosition.mockResolvedValue(3);
 
     const category = await categoryService.createCategory({
+      storeId: STORE_ID,
       name: ' Drinks ',
     });
 
@@ -67,17 +70,24 @@ describe('When we create a category', () => {
   });
 
   it('should start at position 0 when there are no categories', async () => {
-    const category = await categoryService.createCategory({ name: 'Drinks' });
+    const category = await categoryService.createCategory({
+      storeId: STORE_ID,
+      name: 'Drinks',
+    });
 
     expect(category.position).toBe(0);
   });
 
-  it('should reject a name already in use, ignoring casing (CAT-R01)', async () => {
+  it('should reject a name already in use in the store, ignoring casing (CAT-R01)', async () => {
     categoryRepositoryRead.findCategoryByName.mockResolvedValue(aCategory());
 
     await expect(
-      categoryService.createCategory({ name: 'BURGERS' }),
+      categoryService.createCategory({ storeId: STORE_ID, name: 'BURGERS' }),
     ).rejects.toThrow(ConflictError);
+    expect(categoryRepositoryRead.findCategoryByName).toHaveBeenCalledWith(
+      STORE_ID,
+      'BURGERS',
+    );
   });
 });
 
@@ -86,6 +96,7 @@ describe('When we update a category', () => {
     categoryRepositoryRead.findCategoryByName.mockResolvedValue(aCategory());
 
     const category = await categoryService.updateCategory({
+      storeId: STORE_ID,
       id: 'category-1',
       name: 'burgers',
       isActive: false,
@@ -100,22 +111,45 @@ describe('When we update a category', () => {
     );
 
     await expect(
-      categoryService.updateCategory({ id: 'category-1', name: 'Burgers' }),
+      categoryService.updateCategory({
+        storeId: STORE_ID,
+        id: 'category-1',
+        name: 'Burgers',
+      }),
     ).rejects.toMatchObject({ code: 'CATEGORY_NAME_IN_USE' });
+  });
+
+  it('should treat a category of another store as not found (TEN-R04)', async () => {
+    categoryRepositoryRead.findCategoryById.mockResolvedValue(
+      aCategory({ storeId: 'store-2' }),
+    );
+
+    await expect(
+      categoryService.updateCategory({
+        storeId: STORE_ID,
+        id: 'category-1',
+        isActive: false,
+      }),
+    ).rejects.toThrow(NotFoundError);
+    expect(categoryRepositoryWrite.updateCategoryById).not.toHaveBeenCalled();
   });
 
   it('should throw NotFoundError for an unknown category', async () => {
     categoryRepositoryRead.findCategoryById.mockResolvedValue(null);
 
     await expect(
-      categoryService.updateCategory({ id: 'missing', isActive: false }),
+      categoryService.updateCategory({
+        storeId: STORE_ID,
+        id: 'missing',
+        isActive: false,
+      }),
     ).rejects.toThrow(NotFoundError);
   });
 });
 
 describe('When we delete a category', () => {
   it('should delete an empty category', async () => {
-    await categoryService.deleteCategory('category-1');
+    await categoryService.deleteCategory(STORE_ID, 'category-1');
 
     expect(categoryRepositoryWrite.deleteCategoryById).toHaveBeenCalledWith(
       'category-1',
@@ -126,7 +160,7 @@ describe('When we delete a category', () => {
     categoryUsage.countProductsInCategory.mockResolvedValue(2);
 
     await expect(
-      categoryService.deleteCategory('category-1'),
+      categoryService.deleteCategory(STORE_ID, 'category-1'),
     ).rejects.toMatchObject({
       code: 'CATEGORY_NOT_EMPTY',
       details: { productCount: 2 },
@@ -145,7 +179,7 @@ describe('When we reorder the categories (CAT-R03)', () => {
   });
 
   it('should rewrite the positions from the full ordered list', async () => {
-    await categoryService.reorderCategories(['c', 'a', 'b']);
+    await categoryService.reorderCategories(STORE_ID, ['c', 'a', 'b']);
 
     expect(categoryRepositoryWrite.reorderCategories).toHaveBeenCalledWith([
       'c',
@@ -159,8 +193,8 @@ describe('When we reorder the categories (CAT-R03)', () => {
     ['a duplicated id', ['c', 'a', 'a']],
     ['an unknown id', ['c', 'a', 'x']],
   ])('should reject a list with %s', async (_case, ids) => {
-    await expect(categoryService.reorderCategories(ids)).rejects.toMatchObject(
-      { code: 'INVALID_ORDER' },
-    );
+    await expect(
+      categoryService.reorderCategories(STORE_ID, ids),
+    ).rejects.toMatchObject({ code: 'INVALID_ORDER' });
   });
 });

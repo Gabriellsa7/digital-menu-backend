@@ -1,6 +1,7 @@
 import supertest from 'supertest';
 import { app } from '../../../jest/setup-integration-tests';
 import { CategoryServiceFactory } from '../../infrastructure/config/factories/category.service.factory';
+import { StoreServiceFactory } from '../../infrastructure/config/factories/store.service.factory';
 import {
   clearCatalog,
   createCategory,
@@ -8,8 +9,11 @@ import {
   createProduct,
 } from '../helpers/catalog.helper';
 
+let slug: string;
+
 beforeEach(async () => {
   await clearCatalog();
+  ({ slug } = await StoreServiceFactory.create().ensureDefaultStore());
 });
 
 describe('When a visitor opens the menu', () => {
@@ -18,6 +22,7 @@ describe('When a visitor opens the menu', () => {
     const drinks = await createCategory('Bebidas');
     const hidden = await createCategory('Secret');
     await CategoryServiceFactory.create().updateCategory({
+      storeId: hidden.storeId,
       id: hidden.id,
       isActive: false,
     });
@@ -40,7 +45,9 @@ describe('When a visitor opens the menu', () => {
     await createProduct(drinks.id, { name: 'Coca', priceInCents: 700 });
     await createProduct(hidden.id, { name: 'Hidden' });
 
-    const response = await supertest(app.app).get('/public/menu');
+    const response = await supertest(app.app).get(
+      `/public/stores/${slug}/menu`,
+    );
 
     expect(response.statusCode).toBe(200);
     expect(response.headers['cache-control']).toBe('public, max-age=30');
@@ -61,10 +68,37 @@ describe('When a visitor opens the menu', () => {
     const smash = await createProduct(burgers.id, { name: 'Smash' });
     const old = await createProduct(burgers.id, { isActive: false });
 
-    const found = await supertest(app.app).get(`/public/products/${smash.id}`);
-    const hidden = await supertest(app.app).get(`/public/products/${old.id}`);
+    const found = await supertest(app.app).get(
+      `/public/stores/${slug}/products/${smash.id}`,
+    );
+    const hidden = await supertest(app.app).get(
+      `/public/stores/${slug}/products/${old.id}`,
+    );
 
     expect(found.body).toMatchObject({ id: smash.id, optionGroups: [] });
     expect(hidden.statusCode).toBe(404);
+  });
+
+  it('should never show products of another store (TEN-R04)', async () => {
+    const burgers = await createCategory('Burgers');
+    const smash = await createProduct(burgers.id, { name: 'Smash' });
+    const other = await StoreServiceFactory.create().createStore({
+      name: 'Pizza Boa',
+      isPublished: true,
+    });
+
+    const menu = await supertest(app.app).get(
+      `/public/stores/${other.slug}/menu`,
+    );
+    const product = await supertest(app.app).get(
+      `/public/stores/${other.slug}/products/${smash.id}`,
+    );
+    const unknownStore = await supertest(app.app).get(
+      '/public/stores/unknown-store/menu',
+    );
+
+    expect(menu.body.categories).toEqual([]);
+    expect(product.statusCode).toBe(404);
+    expect(unknownStore.body.code).toBe('STORE_NOT_FOUND');
   });
 });

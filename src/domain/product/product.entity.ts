@@ -4,6 +4,7 @@ import { IProduct } from './interfaces/product.interface';
 
 export class Product implements IProduct {
   public readonly id: string;
+  public readonly storeId: string;
   public readonly categoryId: string;
   public readonly name: string;
   public readonly description: string;
@@ -20,6 +21,7 @@ export class Product implements IProduct {
 
   constructor(props: IProduct) {
     this.id = props.id;
+    this.storeId = props.storeId;
     this.categoryId = props.categoryId;
     this.name = props.name.trim();
     this.description = props.description.trim();

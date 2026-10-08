@@ -36,30 +36,34 @@ export class CategoryService implements ICategoryService {
   }
 
   @ErrorHandler()
-  async listCategories(): Promise<ICategory[]> {
-    return this.categoryRepositoryRead.listCategories();
+  async listCategories(storeId: string): Promise<ICategory[]> {
+    return this.categoryRepositoryRead.listCategories(storeId);
   }
 
   @ErrorHandler()
-  async getCategoryById(id: string): Promise<ICategory> {
+  async getCategoryById(storeId: string, id: string): Promise<ICategory> {
     const category = await this.categoryRepositoryRead.findCategoryById(id);
 
-    return category ? category : this.throwCategoryNotFound();
+    return category?.storeId === storeId
+      ? category
+      : this.throwCategoryNotFound();
   }
 
   @ErrorHandler()
   async createCategory({
+    storeId,
     name,
     isActive = true,
   }: IParamsCreateCategory): Promise<ICategory> {
-    await this.assertUniqueName(name);
+    await this.assertUniqueName(storeId, name);
     const now = this.clock.now();
     const position =
-      (await this.categoryRepositoryRead.findMaxCategoryPosition()) + 1;
+      (await this.categoryRepositoryRead.findMaxCategoryPosition(storeId)) + 1;
 
     return this.categoryRepositoryWrite.createCategory(
       new Category({
         id: randomUUID(),
+        storeId,
         name,
         position,
         isActive,
@@ -71,13 +75,14 @@ export class CategoryService implements ICategoryService {
 
   @ErrorHandler()
   async updateCategory({
+    storeId,
     id,
     name,
     isActive,
   }: IParamsUpdateCategory): Promise<ICategory> {
-    await this.getCategoryById(id);
+    await this.getCategoryById(storeId, id);
     if (name !== undefined) {
-      await this.assertUniqueName(name, id);
+      await this.assertUniqueName(storeId, name, id);
     }
 
     const updated = await this.categoryRepositoryWrite.updateCategoryById(id, {
@@ -88,8 +93,8 @@ export class CategoryService implements ICategoryService {
   }
 
   @ErrorHandler()
-  async deleteCategory(id: string): Promise<void> {
-    await this.getCategoryById(id);
+  async deleteCategory(storeId: string, id: string): Promise<void> {
+    await this.getCategoryById(storeId, id);
     const productCount = await this.categoryUsage.countProductsInCategory(id);
     if (productCount > 0) {
       throw new BusinessRuleError(
@@ -102,19 +107,28 @@ export class CategoryService implements ICategoryService {
   }
 
   @ErrorHandler()
-  async reorderCategories(orderedIds: string[]): Promise<ICategory[]> {
-    const categories = await this.categoryRepositoryRead.listCategories();
+  async reorderCategories(
+    storeId: string,
+    orderedIds: string[],
+  ): Promise<ICategory[]> {
+    const categories =
+      await this.categoryRepositoryRead.listCategories(storeId);
     assertCompleteOrder(
       orderedIds,
       categories.map(({ id }) => id),
     );
     await this.categoryRepositoryWrite.reorderCategories(orderedIds);
 
-    return this.categoryRepositoryRead.listCategories();
+    return this.categoryRepositoryRead.listCategories(storeId);
   }
 
-  private async assertUniqueName(name: string, ownId?: string): Promise<void> {
+  private async assertUniqueName(
+    storeId: string,
+    name: string,
+    ownId?: string,
+  ): Promise<void> {
     const existing = await this.categoryRepositoryRead.findCategoryByName(
+      storeId,
       name.trim(),
     );
     if (existing && existing.id !== ownId) {

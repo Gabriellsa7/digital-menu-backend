@@ -183,9 +183,15 @@ export class OrderPricingService implements IOrderPricingService {
     return deliveryZone?.isActive ? deliveryZone : undefined;
   }
 
-  private async buildItems({ items }: IParamsQuoteOrder): Promise<IOrderItem[]> {
+  private async buildItems({
+    storeId,
+    items,
+  }: IParamsQuoteOrder): Promise<IOrderItem[]> {
     const productIds = [...new Set(items.map(({ productId }) => productId))];
-    const products = await this.productService.findProductsByIds(productIds);
+    const products = await this.productService.findProductsByIds(
+      storeId,
+      productIds,
+    );
     const groupIds = [...new Set(products.flatMap((p) => p.optionGroupIds))];
     const optionGroups =
       await this.optionGroupService.findOptionGroupsByIds(groupIds);

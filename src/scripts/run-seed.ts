@@ -49,6 +49,8 @@ async function seedCatalog(): Promise<void> {
   const categoryService = CategoryServiceFactory.create();
   const optionGroupService = OptionGroupServiceFactory.create();
   const productService = ProductServiceFactory.create();
+  const { id: storeId } =
+    await StoreServiceFactory.create().ensureDefaultStore();
 
   const existingGroups = await optionGroupService.listOptionGroups();
   const groupIds = new Map<string, string>();
@@ -66,13 +68,18 @@ async function seedCatalog(): Promise<void> {
     groupIds.set(group.key, saved.id);
   }
 
-  const existingCategories = await categoryService.listCategories();
-  const { items: existingProducts } =
-    await productService.listProducts(PRODUCTS_PAGE);
+  const existingCategories = await categoryService.listCategories(storeId);
+  const { items: existingProducts } = await productService.listProducts({
+    storeId,
+    ...PRODUCTS_PAGE,
+  });
   for (const categorySeed of CATALOG_SEED) {
     const category =
       existingCategories.find(({ name }) => name === categorySeed.name) ??
-      (await categoryService.createCategory({ name: categorySeed.name }));
+      (await categoryService.createCategory({
+        storeId,
+        name: categorySeed.name,
+      }));
     for (const product of categorySeed.products) {
       const exists = existingProducts.some(
         ({ name, categoryId }) =>
@@ -80,6 +87,7 @@ async function seedCatalog(): Promise<void> {
       );
       if (!exists) {
         await productService.createProduct({
+          storeId,
           categoryId: category.id,
           name: product.name,
           description: product.description,
@@ -166,7 +174,7 @@ async function seedCustomerAndOrders(): Promise<void> {
   const storeService = StoreServiceFactory.create();
   const store = await storeService.ensureDefaultStore();
   const { items: products } = await ProductServiceFactory.create().listProducts(
-    { search: 'Coca-Cola', ...PRODUCTS_PAGE },
+    { storeId: store.id, search: 'Coca-Cola', ...PRODUCTS_PAGE },
   );
   const [address] = await customerService.listAddresses(customer.id);
   const cart = {
