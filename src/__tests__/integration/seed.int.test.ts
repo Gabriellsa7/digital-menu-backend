@@ -39,9 +39,9 @@ describe('When we seed the demo stores', () => {
     await runSeed();
     const second = await countAll();
     const home = await supertest(app.app).get(
-      '/public/stores/smash-bros-burger/home',
+      '/places/slug/smash-bros-burger/home',
     );
-    const directory = await supertest(app.app).get('/public/stores');
+    const directory = await supertest(app.app).get('/places');
 
     expect(first).toEqual({
       store: 3,

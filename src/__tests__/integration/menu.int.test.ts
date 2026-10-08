@@ -50,7 +50,7 @@ describe('When a visitor opens the menu', () => {
     await createProduct(hidden.id, { name: 'Hidden' });
 
     const response = await supertest(app.app).get(
-      `/public/stores/${slug}/menu`,
+      `/places/slug/${slug}/menu`,
     );
 
     expect(response.statusCode).toBe(200);
@@ -77,10 +77,10 @@ describe('When a visitor opens the menu', () => {
     const old = await createProduct(burgers.id, { isActive: false });
 
     const found = await supertest(app.app).get(
-      `/public/stores/${slug}/products/${smash.id}`,
+      `/places/slug/${slug}/products/${smash.id}`,
     );
     const hidden = await supertest(app.app).get(
-      `/public/stores/${slug}/products/${old.id}`,
+      `/places/slug/${slug}/products/${old.id}`,
     );
 
     expect(found.body).toMatchObject({ id: smash.id, optionGroups: [] });
@@ -96,13 +96,13 @@ describe('When a visitor opens the menu', () => {
     });
 
     const menu = await supertest(app.app).get(
-      `/public/stores/${other.slug}/menu`,
+      `/places/slug/${other.slug}/menu`,
     );
     const product = await supertest(app.app).get(
-      `/public/stores/${other.slug}/products/${smash.id}`,
+      `/places/slug/${other.slug}/products/${smash.id}`,
     );
     const unknownStore = await supertest(app.app).get(
-      '/public/stores/unknown-store/menu',
+      '/places/slug/unknown-store/menu',
     );
 
     expect(menu.body.categories).toEqual([]);
@@ -134,7 +134,7 @@ describe('When a visitor opens the menu', () => {
     });
 
     const { body, statusCode } = await supertest(app.app).get(
-      `/public/stores/${slug}/home`,
+      `/places/slug/${slug}/home`,
     );
 
     expect(statusCode).toBe(200);

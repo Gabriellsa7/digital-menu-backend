@@ -41,9 +41,9 @@ export class DeliveryZoneController implements IController {
 
   initRoutes() {
     const { staff, owner } = createAuthGuards(this.tokenService);
-    this.router.get('/public/stores/:slug/delivery-zones', this.listPublic);
+    this.router.get('/places/slug/:slug/delivery-zones', this.listPublic);
     this.router.get(
-      '/public/stores/:slug/delivery-zones/resolve',
+      '/places/slug/:slug/delivery-zones/resolve',
       this.resolve,
     );
     this.router.get('/admin/delivery-zones', ...staff, this.listAdmin);

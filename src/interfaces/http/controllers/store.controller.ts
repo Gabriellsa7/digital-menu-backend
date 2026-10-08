@@ -1,5 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { IController } from './controller.interface';
+import { IDeliveryZoneService } from '../../../domain/delivery-zone/interfaces/delivery-zone.service.interface';
+import { toPublicDeliveryZoneResponse } from '../presenters/delivery-zone.presenter';
 import { ITokenService } from '../../../domain/auth/interfaces/token.service.interface';
 import {
   EStoreImageKind,
@@ -19,16 +21,23 @@ const DEFAULT_PAGE_SIZE = 20;
 
 export interface IParamsStoreController {
   storeService: IStoreService;
+  deliveryZoneService: IDeliveryZoneService;
   tokenService: ITokenService;
 }
 
 export class StoreController implements IController {
   router: Router;
   private readonly storeService: IStoreService;
+  private readonly deliveryZoneService: IDeliveryZoneService;
   private readonly tokenService: ITokenService;
 
-  constructor({ storeService, tokenService }: IParamsStoreController) {
+  constructor({
+    storeService,
+    deliveryZoneService,
+    tokenService,
+  }: IParamsStoreController) {
     this.storeService = storeService;
+    this.deliveryZoneService = deliveryZoneService;
     this.tokenService = tokenService;
     this.router = Router();
     this.initRoutes();
@@ -36,8 +45,9 @@ export class StoreController implements IController {
 
   initRoutes() {
     const { staff, owner } = createAuthGuards(this.tokenService);
-    this.router.get('/public/stores', this.listPublicStores);
-    this.router.get('/public/stores/:slug', this.getPublicStore);
+    this.router.get('/places', this.listPublicStores);
+    this.router.get('/places/slug/:slug', this.getPublicStore);
+    this.router.get('/places/slug/:slug/menu/meta', this.getMenuMeta);
     this.router.get('/admin/store', ...staff, this.getStore);
     this.router.put('/admin/store', ...owner, this.updateStore);
     this.router.put(
@@ -89,6 +99,28 @@ export class StoreController implements IController {
         req.params.slug,
       );
       res.status(200).json(toStoreResponse(storeWithStatus));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getMenuMeta = async (
+    req: Request<{ slug: string }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const storeWithStatus = await this.storeService.getPublishedStoreBySlug(
+        req.params.slug,
+      );
+      const deliveryZones = await this.deliveryZoneService.listDeliveryZones(
+        storeWithStatus.store.id,
+        true,
+      );
+      res.status(200).json({
+        place: toStoreResponse(storeWithStatus),
+        deliveryZones: deliveryZones.map(toPublicDeliveryZoneResponse),
+      });
     } catch (error) {
       next(error);
     }

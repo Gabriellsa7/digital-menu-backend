@@ -81,7 +81,7 @@ describe('When anyone reads the public delivery zones', () => {
     await createZone({ name: 'Moema', isActive: false });
 
     const { body } = await supertest(app.app).get(
-      `/public/stores/${store.slug}/delivery-zones`,
+      `/places/slug/${store.slug}/delivery-zones`,
     );
 
     expect(body).toHaveLength(1);
@@ -92,10 +92,10 @@ describe('When anyone reads the public delivery zones', () => {
     await createZone();
 
     const found = await supertest(app.app)
-      .get(`/public/stores/${store.slug}/delivery-zones/resolve`)
+      .get(`/places/slug/${store.slug}/delivery-zones/resolve`)
       .query({ neighborhood: 'VILA MARIÁNA', city: 'sao paulo' });
     const missing = await supertest(app.app)
-      .get(`/public/stores/${store.slug}/delivery-zones/resolve`)
+      .get(`/places/slug/${store.slug}/delivery-zones/resolve`)
       .query({ neighborhood: 'Moema', city: 'São Paulo' });
 
     expect(found.body.name).toBe('Vila Mariana');

@@ -670,7 +670,7 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/stores:
+  /places:
     get:
       tags:
         - Store
@@ -696,7 +696,7 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/stores/{slug}:
+  /places/slug/{slug}:
     parameters:
       - $ref: '#/components/parameters/StoreSlug'
     get:
@@ -873,7 +873,28 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/stores/{slug}/delivery-zones:
+  /places/slug/{slug}/menu/meta:
+    parameters:
+      - $ref: '#/components/parameters/StoreSlug'
+    get:
+      tags:
+        - Store
+      summary: Get the store info for the menu header and info screen
+      operationId: getPlaceMenuMeta
+      description: The published store with its status, plus its active delivery zones.
+      responses:
+        '200':
+          description: Store info and delivery zones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceMenuMeta'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /places/slug/{slug}/delivery-zones:
     parameters:
       - $ref: '#/components/parameters/StoreSlug'
     get:
@@ -895,7 +916,7 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/stores/{slug}/delivery-zones/resolve:
+  /places/slug/{slug}/delivery-zones/resolve:
     parameters:
       - $ref: '#/components/parameters/StoreSlug'
     get:
@@ -1778,7 +1799,7 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/stores/{slug}/home:
+  /places/slug/{slug}/home:
     parameters:
       - $ref: '#/components/parameters/StoreSlug'
     get:
@@ -1799,7 +1820,7 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/stores/{slug}/menu:
+  /places/slug/{slug}/menu:
     parameters:
       - $ref: '#/components/parameters/StoreSlug'
     get:
@@ -1820,7 +1841,7 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/stores/{slug}/products/{id}:
+  /places/slug/{slug}/products/{id}:
     parameters:
       - $ref: '#/components/parameters/StoreSlug'
       - $ref: '#/components/parameters/Id'
@@ -3048,6 +3069,18 @@ components:
           type: integer
         status:
           $ref: '#/components/schemas/StoreStatus'
+    PlaceMenuMeta:
+      type: object
+      required:
+        - place
+        - deliveryZones
+      properties:
+        place:
+          $ref: '#/components/schemas/Store'
+        deliveryZones:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicDeliveryZone'
     StoreSummary:
       type: object
       required:
