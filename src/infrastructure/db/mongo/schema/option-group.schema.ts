@@ -21,6 +21,7 @@ const optionSchema = new mongoose.Schema<IOption>(
 export const optionGroupSchema = new mongoose.Schema<IMOptionGroup>(
   {
     id: { type: String, required: true, unique: true },
+    storeId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     minSelections: { type: Number, required: true },
     maxSelections: { type: Number, required: true },

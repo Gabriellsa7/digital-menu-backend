@@ -8,6 +8,7 @@ function anOption(name: string) {
 function aGroup(overrides: Partial<IOptionGroup> = {}): IOptionGroup {
   return {
     id: 'group-1',
+    storeId: 'store-1',
     name: 'Pão',
     minSelections: 1,
     maxSelections: 1,

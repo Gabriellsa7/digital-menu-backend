@@ -45,6 +45,7 @@ export function anOptionGroupFixture(
 ): IOptionGroup {
   return {
     id: 'extras',
+    storeId: 'store-1',
     name: 'Adicionais',
     minSelections: 0,
     maxSelections: 3,

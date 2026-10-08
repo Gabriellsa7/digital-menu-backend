@@ -13,6 +13,7 @@ export interface IParamsOptionData {
 }
 
 export interface IParamsOptionGroupData {
+  storeId: string;
   name: string;
   minSelections: number;
   maxSelections: number;
@@ -25,6 +26,7 @@ export interface IParamsUpdateOptionGroup extends IParamsOptionGroupData {
 }
 
 export interface IParamsSetOptionAvailability {
+  storeId: string;
   optionGroupId: string;
   optionId: string;
   isAvailable: boolean;
@@ -39,12 +41,15 @@ export interface IParamsOptionGroupService {
 }
 
 export interface IOptionGroupService {
-  listOptionGroups(): Promise<IOptionGroup[]>;
-  getOptionGroupById(id: string): Promise<IOptionGroup>;
-  findOptionGroupsByIds(ids: string[]): Promise<IOptionGroup[]>;
+  listOptionGroups(storeId: string): Promise<IOptionGroup[]>;
+  getOptionGroupById(storeId: string, id: string): Promise<IOptionGroup>;
+  findOptionGroupsByIds(
+    storeId: string,
+    ids: string[],
+  ): Promise<IOptionGroup[]>;
   createOptionGroup(params: IParamsOptionGroupData): Promise<IOptionGroup>;
   updateOptionGroup(params: IParamsUpdateOptionGroup): Promise<IOptionGroup>;
-  deleteOptionGroup(id: string): Promise<void>;
+  deleteOptionGroup(storeId: string, id: string): Promise<void>;
   setOptionAvailability(
     params: IParamsSetOptionAvailability,
   ): Promise<IOptionGroup>;

@@ -1,6 +1,9 @@
 import { IOptionGroup } from '../../option-group/interfaces/option-group.interface';
 
-export type IMenuOptionGroup = Omit<IOptionGroup, 'createdAt' | 'updatedAt'>;
+export type IMenuOptionGroup = Omit<
+  IOptionGroup,
+  'storeId' | 'createdAt' | 'updatedAt'
+>;
 
 export interface IMenuProduct {
   id: string;

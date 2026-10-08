@@ -31,10 +31,11 @@ export async function createCategory(
   });
 }
 
-export function createOptionGroup(
+export async function createOptionGroup(
   overrides: Partial<IParamsOptionGroupData> = {},
 ) {
   return OptionGroupServiceFactory.create().createOptionGroup({
+    storeId: await defaultStoreId(),
     name: 'Adicionais',
     minSelections: 0,
     maxSelections: 2,

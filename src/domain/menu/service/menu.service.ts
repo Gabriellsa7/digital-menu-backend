@@ -38,7 +38,7 @@ export class MenuService implements IMenuService {
       this.categoryService.listCategories(storeId),
       this.productService.listActiveProducts(storeId),
     ]);
-    const optionGroupsById = await this.optionGroupsFor(products);
+    const optionGroupsById = await this.optionGroupsFor(storeId, products);
 
     return {
       categories: categories
@@ -72,7 +72,10 @@ export class MenuService implements IMenuService {
       throw new NotFoundError('Product not found');
     }
 
-    return toMenuProduct(product, await this.optionGroupsFor([product]));
+    return toMenuProduct(
+      product,
+      await this.optionGroupsFor(storeId, [product]),
+    );
   }
 
   private async publishedStoreId(storeSlug: string): Promise<string> {
@@ -82,11 +85,14 @@ export class MenuService implements IMenuService {
   }
 
   private async optionGroupsFor(
+    storeId: string,
     products: IProduct[],
   ): Promise<Map<string, IOptionGroup>> {
     const ids = [...new Set(products.flatMap((p) => p.optionGroupIds))];
-    const optionGroups =
-      await this.optionGroupService.findOptionGroupsByIds(ids);
+    const optionGroups = await this.optionGroupService.findOptionGroupsByIds(
+      storeId,
+      ids,
+    );
     return new Map(optionGroups.map((group) => [group.id, group]));
   }
 }
