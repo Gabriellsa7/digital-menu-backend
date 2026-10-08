@@ -14,7 +14,7 @@ import { SocketEmitter } from './socket.emitter';
 export class SocketStorePublisher implements IStoreEventPublisher {
   constructor(private readonly emitter: SocketEmitter) {}
 
-  publishStoreStatusChanged(status: IStoreStatus): void {
+  publishStoreStatusChanged(storeId: string, status: IStoreStatus): void {
     const payload: IStoreStatusChangedPayload = {
       isOpenNow: status.isOpenNow,
       manualStatus: status.manualStatus,
@@ -24,13 +24,14 @@ export class SocketStorePublisher implements IStoreEventPublisher {
       ...(status.closesAt && { closesAt: status.closesAt.toISOString() }),
     };
     this.emitter.emit(
-      [WS_ROOMS.STORE_PUBLIC],
+      [WS_ROOMS.storePublic(storeId)],
       WS_EVENTS.STORE_STATUS_CHANGED,
       payload,
     );
   }
 
   publishProductAvailabilityChanged(
+    storeId: string,
     productId: string,
     isAvailable: boolean,
   ): void {
@@ -39,19 +40,20 @@ export class SocketStorePublisher implements IStoreEventPublisher {
       isAvailable,
     };
     this.emitter.emit(
-      [WS_ROOMS.STORE_PUBLIC],
+      [WS_ROOMS.storePublic(storeId)],
       WS_EVENTS.PRODUCT_AVAILABILITY_CHANGED,
       payload,
     );
   }
 
-  publishOptionAvailabilityChanged(
-    params: IParamsOptionAvailabilityChanged,
-  ): void {
+  publishOptionAvailabilityChanged({
+    storeId,
+    ...payload
+  }: IParamsOptionAvailabilityChanged): void {
     this.emitter.emit(
-      [WS_ROOMS.STORE_PUBLIC],
+      [WS_ROOMS.storePublic(storeId)],
       WS_EVENTS.OPTION_AVAILABILITY_CHANGED,
-      { ...params },
+      payload,
     );
   }
 }

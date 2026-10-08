@@ -22,7 +22,7 @@ export class StoreStatusJob implements IJob {
         (lastStatus.isOpenNow !== status.isOpenNow ||
           lastStatus.manualStatus !== status.manualStatus);
       if (hasChanged) {
-        this.storeEventPublisher.publishStoreStatusChanged(status);
+        this.storeEventPublisher.publishStoreStatusChanged(id, status);
       }
       this.lastStatuses.set(id, status);
     }

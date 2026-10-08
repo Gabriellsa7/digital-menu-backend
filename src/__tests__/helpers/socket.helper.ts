@@ -4,11 +4,15 @@ import { Server as SocketServer } from 'socket.io';
 import { io as connect, Socket } from 'socket.io-client';
 import { app } from '../../../jest/setup-integration-tests';
 import { TokenServiceFactory } from '../../infrastructure/config/factories/token.service.factory';
-import { createSocketServer } from '../../infrastructure/realtime/socket.server';
+import { StoreServiceFactory } from '../../infrastructure/config/factories/store.service.factory';
+import {
+  createSocketServer,
+  publishedStoreIdResolver,
+} from '../../infrastructure/realtime/socket.server';
 
 export interface ISocketTestServer {
   io: SocketServer;
-  connectClient(token?: string): Promise<Socket>;
+  connectClient(token?: string, storeSlug?: string): Promise<Socket>;
   close(): Promise<void>;
 }
 
@@ -18,6 +22,7 @@ export async function startSocketTestServer(): Promise<ISocketTestServer> {
   const io = createSocketServer({
     httpServer,
     tokenService: TokenServiceFactory.create(),
+    resolveStoreId: publishedStoreIdResolver(StoreServiceFactory.create()),
     corsOrigins: [],
   });
   const { port } = httpServer.address() as AddressInfo;
@@ -25,10 +30,10 @@ export async function startSocketTestServer(): Promise<ISocketTestServer> {
 
   return {
     io,
-    connectClient: (token) =>
+    connectClient: (token, storeSlug) =>
       new Promise((resolve, reject) => {
         const client = connect(`http://localhost:${port}`, {
-          auth: token ? { token } : {},
+          auth: { ...(token && { token }), ...(storeSlug && { storeSlug }) },
           transports: ['websocket'],
           reconnection: false,
         });

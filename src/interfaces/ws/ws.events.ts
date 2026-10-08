@@ -3,8 +3,8 @@ import { EPaymentStatus } from '../../domain/payment/interfaces/payment.interfac
 import { EManualStatus } from '../../domain/store/interfaces/store.interface';
 
 export const WS_ROOMS = {
-  STORE_PUBLIC: 'store:public',
-  STORE_STAFF: 'store:staff',
+  storePublic: (storeId: string) => `store:${storeId}:public`,
+  storeStaff: (storeId: string) => `store:${storeId}:staff`,
   customer: (customerId: string) => `customer:${customerId}`,
 };
 

@@ -105,7 +105,7 @@ describe('When the socket publisher emits order events', () => {
 
     expect(emitter.emit).toHaveBeenNthCalledWith(
       1,
-      ['store:staff', 'customer:customer-9'],
+      ['store:store-1:staff', 'customer:customer-9'],
       'order.status_changed',
       expect.objectContaining({
         orderId: order.id,
@@ -115,7 +115,7 @@ describe('When the socket publisher emits order events', () => {
     );
     expect(emitter.emit).toHaveBeenNthCalledWith(
       2,
-      ['store:staff'],
+      ['store:store-1:staff'],
       'order.created',
       expect.objectContaining({ itemsCount: 1 }),
     );
@@ -153,6 +153,7 @@ describe('When the store status job ticks (STO-R05)', () => {
     expect(refreshStoreStatus).toHaveBeenCalledTimes(6);
     expect(publisher.publishStoreStatusChanged).toHaveBeenCalledTimes(1);
     expect(publisher.publishStoreStatusChanged).toHaveBeenCalledWith(
+      'store-a',
       aStatus(true),
     );
   });

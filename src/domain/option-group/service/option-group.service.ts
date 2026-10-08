@@ -142,6 +142,7 @@ export class OptionGroupService implements IOptionGroupService {
       this.throwOptionGroupNotFound();
     }
     this.storeEventPublisher.publishOptionAvailabilityChanged({
+      storeId,
       optionGroupId,
       optionId,
       isAvailable,

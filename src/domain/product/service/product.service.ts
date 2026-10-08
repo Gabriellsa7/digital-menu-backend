@@ -162,7 +162,11 @@ export class ProductService implements IProductService {
     const product = await this.updateProductFields(id, {
       set: { isAvailable },
     });
-    this.storeEventPublisher.publishProductAvailabilityChanged(id, isAvailable);
+    this.storeEventPublisher.publishProductAvailabilityChanged(
+      storeId,
+      id,
+      isAvailable,
+    );
     return product;
   }
 

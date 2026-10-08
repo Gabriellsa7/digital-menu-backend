@@ -181,7 +181,7 @@ export class StoreService implements IStoreService {
       }),
     );
     const status = updated.statusAt(now);
-    this.storeEventPublisher.publishStoreStatusChanged(status);
+    this.storeEventPublisher.publishStoreStatusChanged(storeId, status);
     Logger.info('Store manual status changed', {
       eventName: 'store.manual_status_changed',
       storeId,

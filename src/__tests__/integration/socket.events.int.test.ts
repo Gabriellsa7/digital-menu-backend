@@ -9,7 +9,8 @@ import {
   startSocketTestServer,
   waitForEvent,
 } from '../helpers/socket.helper';
-import { loginAs } from '../helpers/staff-session.helper';
+import { StoreServiceFactory } from '../../infrastructure/config/factories/store.service.factory';
+import { createStore, loginAs } from '../helpers/staff-session.helper';
 
 let server: ISocketTestServer;
 let checkout: Awaited<ReturnType<typeof setupCheckout>>;
@@ -86,8 +87,14 @@ describe('When orders change in real time', () => {
     expect(leaked).toHaveLength(0);
   });
 
-  it('should broadcast a sold-out product to anonymous visitors', async () => {
-    const visitor = await server.connectClient();
+  it('should broadcast a sold-out product only to visitors of that store', async () => {
+    const { slug } = await StoreServiceFactory.create().getStore(
+      checkout.storeId,
+    );
+    const otherStore = await createStore('Pizza Boa');
+    const visitor = await server.connectClient(undefined, slug);
+    const otherVisitor = await server.connectClient(undefined, otherStore.slug);
+    const leaked = collect(otherVisitor, 'product.availability_changed');
     const { accessToken } = await loginAs(EStaffRole.STAFF);
 
     const event = waitForEvent(visitor, 'product.availability_changed');
@@ -99,5 +106,6 @@ describe('When orders change in real time', () => {
       productId: checkout.smash.id,
       isAvailable: false,
     });
+    expect(leaked).toHaveLength(0);
   });
 });

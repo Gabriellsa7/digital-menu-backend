@@ -22,7 +22,10 @@ import { StoreServiceFactory } from './infrastructure/config/factories/store.ser
 import { ensureOwner } from './infrastructure/bootstrap/ensure-owner';
 import { TickRunnerFactory } from './infrastructure/config/factories/tick-runner.factory';
 import { TokenServiceFactory } from './infrastructure/config/factories/token.service.factory';
-import { createSocketServer } from './infrastructure/realtime/socket.server';
+import {
+  createSocketServer,
+  publishedStoreIdResolver,
+} from './infrastructure/realtime/socket.server';
 import { socketEmitter } from './infrastructure/realtime/socket.emitter';
 
 const OPEN_API_SPEC_FILE_LOCATION = path.resolve(
@@ -67,6 +70,7 @@ async function start() {
   const io = createSocketServer({
     httpServer,
     tokenService: TokenServiceFactory.create(),
+    resolveStoreId: publishedStoreIdResolver(StoreServiceFactory.create()),
     corsOrigins: env.corsOrigins,
   });
   socketEmitter.attach(io);
