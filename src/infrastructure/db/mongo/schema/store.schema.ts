@@ -67,6 +67,8 @@ export const storeSchema = new mongoose.Schema<IMStore>(
     deliveryEnabled: { type: Boolean, required: true },
     pickupEnabled: { type: Boolean, required: true },
     pickupEtaMinutes: { type: Number, required: true },
+    isPublished: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true },
 );

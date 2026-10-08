@@ -41,6 +41,8 @@ export interface IStore {
   deliveryEnabled: boolean;
   pickupEnabled: boolean;
   pickupEtaMinutes: number;
+  isPublished: boolean;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
