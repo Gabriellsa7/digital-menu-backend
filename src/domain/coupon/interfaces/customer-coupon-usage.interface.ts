@@ -3,5 +3,5 @@ export interface ICustomerCouponUsage {
     customerId: string,
     couponId: string,
   ): Promise<number>;
-  hasCompletedOrder(customerId: string): Promise<boolean>;
+  hasCompletedOrder(customerId: string, storeId: string): Promise<boolean>;
 }

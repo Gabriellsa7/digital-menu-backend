@@ -25,6 +25,7 @@ import { anOrderFixture } from '../helpers/order.fixtures';
 import { FixedClock } from '../helpers/fixed.clock';
 
 const QUOTE = {
+  store: { name: 'Casa Brasa', slug: 'casa-brasa' },
   items: anOrderFixture().items,
   fulfillmentType: EFulfillmentType.PICKUP,
   subtotalInCents: 3000,
@@ -59,6 +60,7 @@ let customerService: jest.Mocked<
   Pick<ICustomerService, 'assertCustomerCanOrder'>
 >;
 let couponService: jest.Mocked<Pick<ICouponService, 'reserveCouponUse'>>;
+let counterRepository: { nextValue: jest.Mock };
 let orderService: OrderService;
 
 beforeEach(() => {
@@ -83,11 +85,12 @@ beforeEach(() => {
   const transactionRunner: ITransactionRunner = {
     runInTransaction: (work) => work('tx'),
   };
+  counterRepository = { nextValue: jest.fn().mockResolvedValue(1042) };
   orderService = new OrderService({
     orderRepositoryRead: orderRepositoryRead as unknown as IOrderRepositoryRead,
     orderRepositoryWrite:
       orderRepositoryWrite as unknown as IOrderRepositoryWrite,
-    counterRepository: { nextValue: jest.fn().mockResolvedValue(1042) },
+    counterRepository,
     transactionRunner,
     orderPricingService,
     customerService: customerService as unknown as ICustomerService,
@@ -125,6 +128,14 @@ describe('When a customer places an order paid on delivery', () => {
       expect.objectContaining({ status: EOrderStatus.PLACED }),
     ]);
     expect(order).not.toHaveProperty('etaMinMinutes');
+    expect(order).toMatchObject({
+      storeId: 'store-1',
+      storeSnapshot: { name: 'Casa Brasa', slug: 'casa-brasa' },
+    });
+    expect(counterRepository.nextValue).toHaveBeenCalledWith(
+      'order_number:store-1',
+      'tx',
+    );
   });
 
   it('should reserve the coupon use inside the transaction (CPN-R09)', async () => {
@@ -216,6 +227,7 @@ describe('When staff manages an order', () => {
     orderRepositoryRead.findOrderById.mockResolvedValue(order);
 
     await orderService.changeOrderStatus({
+      storeId: 'store-1',
       orderId: order.id,
       staffId: 'staff-1',
       status: EOrderStatus.PREPARING,
@@ -236,6 +248,7 @@ describe('When staff manages an order', () => {
     orderRepositoryRead.findOrderById.mockResolvedValue(order);
 
     await orderService.rejectOrder({
+      storeId: 'store-1',
       orderId: order.id,
       staffId: 'staff-1',
       reason: 'Sem pão',
@@ -249,11 +262,28 @@ describe('When staff manages an order', () => {
     );
   });
 
+  it('should treat an order of another store as not found (TEN-R04)', async () => {
+    orderRepositoryRead.findOrderById.mockResolvedValue(
+      anOrderFixture({ storeId: 'store-2' }),
+    );
+
+    await expect(
+      orderService.cancelOrderByStaff({
+        storeId: 'store-1',
+        orderId: 'order-1',
+        staffId: 'staff-1',
+        reason: 'x',
+      }),
+    ).rejects.toThrow(NotFoundError);
+    expect(orderTransitionService.transitionOrder).not.toHaveBeenCalled();
+  });
+
   it('should throw NotFoundError for an unknown order', async () => {
     orderRepositoryRead.findOrderById.mockResolvedValue(null);
 
     await expect(
       orderService.cancelOrderByStaff({
+        storeId: 'store-1',
         orderId: 'missing',
         staffId: 'staff-1',
         reason: 'x',

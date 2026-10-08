@@ -54,11 +54,14 @@ describe('When we look up orders', () => {
       orderRepositoryRead.countCouponUsesByCustomer('customer-1', 'coupon-1'),
     ).resolves.toBe(1);
     await expect(
-      orderRepositoryRead.hasCompletedOrder('customer-1'),
+      orderRepositoryRead.hasCompletedOrder('customer-1', 'store-1'),
     ).resolves.toBe(true);
-    await expect(orderRepositoryRead.hasCompletedOrder('other')).resolves.toBe(
-      false,
-    );
+    await expect(
+      orderRepositoryRead.hasCompletedOrder('customer-1', 'store-2'),
+    ).resolves.toBe(false);
+    await expect(
+      orderRepositoryRead.hasCompletedOrder('other', 'store-1'),
+    ).resolves.toBe(false);
   });
 
   it('should search by number or customer name and list active orders', async () => {
@@ -70,17 +73,23 @@ describe('When we look up orders', () => {
       }),
     );
 
+    await orderRepositoryWrite.createOrder(
+      anOrderFixture({ storeId: 'store-2', number: 42 }),
+    );
+
     const byNumber = await orderRepositoryRead.searchOrders({
+      storeId: 'store-1',
       search: '42',
       limit: 10,
       offset: 0,
     });
     const byName = await orderRepositoryRead.searchOrders({
+      storeId: 'store-1',
       search: 'rob',
       limit: 10,
       offset: 0,
     });
-    const active = await orderRepositoryRead.listActiveOrders();
+    const active = await orderRepositoryRead.listActiveOrders('store-1');
 
     expect(byNumber.items.map(({ number }) => number)).toEqual([42]);
     expect(byName.total).toBe(1);

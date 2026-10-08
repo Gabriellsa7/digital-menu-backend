@@ -99,6 +99,7 @@ export class CustomerOrderController implements IController {
       const { items, total } = await this.orderService.listOrdersForCustomer(
         req.auth!.subjectId,
         { limit, offset: (page - 1) * limit },
+        typeof req.query.storeId === 'string' ? req.query.storeId : undefined,
       );
       res.status(200).json({
         items: items.map(toOrderSummaryResponse),

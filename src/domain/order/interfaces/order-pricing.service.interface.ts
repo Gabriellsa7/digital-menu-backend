@@ -11,6 +11,7 @@ import {
   IOrderCouponSnapshot,
   IOrderDeliveryZoneSnapshot,
   IOrderItem,
+  IOrderStoreSnapshot,
 } from './order.interface';
 
 export interface ICartItemOption {
@@ -38,6 +39,7 @@ export interface IParamsQuoteOrder {
 }
 
 export interface IOrderQuote {
+  store: IOrderStoreSnapshot;
   items: IOrderItem[];
   fulfillmentType: EFulfillmentType;
   deliveryAddress?: IPostalAddress;

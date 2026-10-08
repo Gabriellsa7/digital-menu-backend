@@ -105,12 +105,12 @@ export class OrderService implements IOrderService {
     const status = isPaidOnDelivery(params.paymentMethod)
       ? EOrderStatus.PLACED
       : EOrderStatus.AWAITING_PAYMENT;
-    const { etaMinMinutes, etaMaxMinutes, ...pricing } = quote;
+    const { etaMinMinutes, etaMaxMinutes, store, ...pricing } = quote;
 
     const order = await this.transactionRunner.runInTransaction(
       async (context) => {
         const number = await this.counterRepository.nextValue(
-          ORDER_NUMBER_COUNTER,
+          `${ORDER_NUMBER_COUNTER}:${params.storeId}`,
           context,
         );
         const id = randomUUID();
@@ -124,6 +124,8 @@ export class OrderService implements IOrderService {
         const newOrder = new Order({
           ...pricing,
           id,
+          storeId: params.storeId,
+          storeSnapshot: store,
           number,
           customerId: customer.id,
           customerSnapshot: { name: customer.name!, phone: customer.phone! },
@@ -155,6 +157,7 @@ export class OrderService implements IOrderService {
     Logger.info('Order created', {
       eventName: 'order.created',
       orderId: order.id,
+      storeId: order.storeId,
       number: order.number,
       status: order.status,
       totalInCents: order.totalInCents,
@@ -166,8 +169,13 @@ export class OrderService implements IOrderService {
   async listOrdersForCustomer(
     customerId: string,
     pagination: IPagination,
+    storeId?: string,
   ): Promise<IPaginatedResult<IOrder>> {
-    return this.orderRepositoryRead.listOrdersByCustomer(customerId, pagination);
+    return this.orderRepositoryRead.listOrdersByCustomer(
+      customerId,
+      pagination,
+      storeId,
+    );
   }
 
   @ErrorHandler()
@@ -205,25 +213,26 @@ export class OrderService implements IOrderService {
   }
 
   @ErrorHandler()
-  async listActiveOrders(): Promise<IOrder[]> {
-    return this.orderRepositoryRead.listActiveOrders();
+  async listActiveOrders(storeId: string): Promise<IOrder[]> {
+    return this.orderRepositoryRead.listActiveOrders(storeId);
   }
 
   @ErrorHandler()
-  async getOrderById(orderId: string): Promise<IOrder> {
+  async getOrderById(storeId: string, orderId: string): Promise<IOrder> {
     const order = await this.orderRepositoryRead.findOrderById(orderId);
 
-    return order ? order : this.throwOrderNotFound();
+    return order?.storeId === storeId ? order : this.throwOrderNotFound();
   }
 
   @ErrorHandler()
   async changeOrderStatus({
+    storeId,
     orderId,
     staffId,
     status,
     estimatedMinutes,
   }: IParamsChangeOrderStatus): Promise<IOrder> {
-    const order = await this.getOrderById(orderId);
+    const order = await this.getOrderById(storeId, orderId);
     const minutes = estimatedMinutes ?? DEFAULT_PREPARATION_MINUTES;
     return this.orderTransitionService.transitionOrder({
       order,
@@ -250,10 +259,10 @@ export class OrderService implements IOrderService {
   }
 
   private async endOrderByStaff(
-    { orderId, staffId, reason }: IParamsEndOrderByStaff,
+    { storeId, orderId, staffId, reason }: IParamsEndOrderByStaff,
     status: EOrderStatus,
   ): Promise<IOrder> {
-    const order = await this.getOrderById(orderId);
+    const order = await this.getOrderById(storeId, orderId);
     return this.orderTransitionService.transitionOrder({
       order,
       to: status,

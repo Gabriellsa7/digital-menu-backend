@@ -119,7 +119,19 @@ const statusEntrySchema = new Schema<IOrderStatusEntry>(
 export const orderSchema = new Schema<IMOrder>(
   {
     id: { type: String, required: true, unique: true },
-    number: { type: Number, required: true, unique: true },
+    storeId: { type: String, required: true },
+    storeSnapshot: {
+      type: new Schema(
+        {
+          name: { type: String, required: true },
+          slug: { type: String, required: true },
+          logoUrl: { type: String },
+        },
+        { _id: false },
+      ),
+      required: true,
+    },
+    number: { type: Number, required: true },
     customerId: { type: String, required: true },
     customerSnapshot: {
       type: new Schema(
@@ -178,7 +190,9 @@ export const orderSchema = new Schema<IMOrder>(
   { timestamps: true },
 );
 
+orderSchema.index({ storeId: 1, number: 1 }, { unique: true });
 orderSchema.index({ customerId: 1, createdAt: -1 });
+orderSchema.index({ storeId: 1, status: 1, createdAt: 1 });
 orderSchema.index({ status: 1, createdAt: 1 });
 orderSchema.index(
   { customerId: 1, idempotencyKey: 1 },

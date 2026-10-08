@@ -1826,13 +1826,17 @@ paths:
     get:
       tags:
         - Customer orders
-      summary: List the own orders, newest first
+      summary: List the own orders of every store, newest first
       operationId: listCustomerOrders
       security:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Limit'
+        - name: storeId
+          in: query
+          schema:
+            type: string
       responses:
         '200':
           description: A page of orders
@@ -3644,6 +3648,8 @@ components:
         - type: object
           required:
             - id
+            - storeId
+            - store
             - number
             - customerId
             - customerSnapshot
@@ -3654,8 +3660,13 @@ components:
           properties:
             id:
               type: string
+            storeId:
+              type: string
+            store:
+              $ref: '#/components/schemas/OrderStore'
             number:
               type: integer
+              description: Sequential per store (TEN-R08)
             customerId:
               type: string
             customerSnapshot:
@@ -3734,6 +3745,18 @@ components:
         cvv:
           type: string
           pattern: '^\d{3,4}$'
+    OrderStore:
+      type: object
+      required:
+        - name
+        - slug
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: string
     OrderSummary:
       type: object
       required:
@@ -3746,10 +3769,13 @@ components:
         - paymentMethod
         - paymentStatus
         - customerName
+        - store
         - createdAt
       properties:
         id:
           type: string
+        store:
+          $ref: '#/components/schemas/OrderStore'
         number:
           type: integer
         status:

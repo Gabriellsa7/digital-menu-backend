@@ -43,13 +43,17 @@ export class OrderRepositoryRead
   async listOrdersByCustomer(
     customerId: string,
     pagination: IPagination,
+    storeId?: string,
   ): Promise<IPaginatedResult<IOrder>> {
-    return this.paginate({ customerId }, pagination);
+    return this.paginate(
+      { customerId, ...(storeId && { storeId }) },
+      pagination,
+    );
   }
 
-  async listActiveOrders(): Promise<IOrder[]> {
+  async listActiveOrders(storeId: string): Promise<IOrder[]> {
     return Morder.find(
-      { status: { $in: ACTIVE_ORDER_STATUSES } },
+      { storeId, status: { $in: ACTIVE_ORDER_STATUSES } },
       HIDE_MONGO_INTERNAL_FIELDS,
     )
       .sort({ createdAt: 1 })
@@ -57,6 +61,7 @@ export class OrderRepositoryRead
   }
 
   async searchOrders({
+    storeId,
     status,
     from,
     to,
@@ -66,6 +71,7 @@ export class OrderRepositoryRead
   }: IParamsSearchOrders): Promise<IPaginatedResult<IOrder>> {
     const term = search?.trim();
     const filter: RootFilterQuery<IMOrder> = {
+      storeId,
       ...(status && { status }),
       ...((from || to) && {
         createdAt: { ...(from && { $gte: from }), ...(to && { $lte: to }) },
@@ -110,9 +116,13 @@ export class OrderRepositoryRead
     });
   }
 
-  async hasCompletedOrder(customerId: string): Promise<boolean> {
+  async hasCompletedOrder(
+    customerId: string,
+    storeId: string,
+  ): Promise<boolean> {
     const order = await Morder.exists({
       customerId,
+      storeId,
       status: EOrderStatus.COMPLETED,
     });
     return order !== null;

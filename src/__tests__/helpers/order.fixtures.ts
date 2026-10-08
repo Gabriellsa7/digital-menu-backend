@@ -15,6 +15,8 @@ export function anOrderFixture(overrides: Partial<IOrder> = {}): IOrder {
   const status = overrides.status ?? EOrderStatus.PLACED;
   return {
     id: randomUUID(),
+    storeId: 'store-1',
+    storeSnapshot: { name: 'Digital Menu', slug: 'digital-menu' },
     number: Math.floor(Math.random() * 1e9),
     customerId: 'customer-1',
     customerSnapshot: { name: 'Nami', phone: '+5511999998888' },

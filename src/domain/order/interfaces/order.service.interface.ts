@@ -28,6 +28,7 @@ export interface IParamsCreateOrder extends IParamsQuoteOrder {
 }
 
 export interface IParamsChangeOrderStatus {
+  storeId: string;
   orderId: string;
   staffId: string;
   status: EOrderStatus;
@@ -35,6 +36,7 @@ export interface IParamsChangeOrderStatus {
 }
 
 export interface IParamsEndOrderByStaff {
+  storeId: string;
   orderId: string;
   staffId: string;
   reason: string;
@@ -60,6 +62,7 @@ export interface IOrderService {
   listOrdersForCustomer(
     customerId: string,
     pagination: IPagination,
+    storeId?: string,
   ): Promise<IPaginatedResult<IOrder>>;
   getOrderForCustomer(orderId: string, customerId: string): Promise<IOrder>;
   cancelOrderByCustomer(
@@ -68,8 +71,8 @@ export interface IOrderService {
     reason?: string,
   ): Promise<IOrder>;
   searchOrders(params: IParamsSearchOrders): Promise<IPaginatedResult<IOrder>>;
-  listActiveOrders(): Promise<IOrder[]>;
-  getOrderById(orderId: string): Promise<IOrder>;
+  listActiveOrders(storeId: string): Promise<IOrder[]>;
+  getOrderById(storeId: string, orderId: string): Promise<IOrder>;
   changeOrderStatus(params: IParamsChangeOrderStatus): Promise<IOrder>;
   rejectOrder(params: IParamsEndOrderByStaff): Promise<IOrder>;
   cancelOrderByStaff(params: IParamsEndOrderByStaff): Promise<IOrder>;

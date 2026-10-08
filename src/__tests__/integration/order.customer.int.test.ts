@@ -41,6 +41,23 @@ describe('When a customer reads the order history', () => {
       id: second,
       statusHistory: [{ status: 'PLACED' }],
     });
+    expect(page.body.items[0].store).toEqual(
+      expect.objectContaining({ slug: expect.any(String) }),
+    );
+  });
+
+  it('should filter the history by store', async () => {
+    await placeOrder();
+
+    const mine = await as(checkout.accessToken)
+      .get('/me/orders')
+      .query({ storeId: checkout.storeId });
+    const other = await as(checkout.accessToken)
+      .get('/me/orders')
+      .query({ storeId: 'another-store' });
+
+    expect(mine.body.total).toBe(1);
+    expect(other.body.total).toBe(0);
   });
 
   it("should answer 404 for another customer's order (ORD-R18)", async () => {

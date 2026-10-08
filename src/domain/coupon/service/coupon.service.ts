@@ -138,7 +138,7 @@ export class CouponService implements ICouponService {
     }
     const [customerUses, hasCompletedOrder] = await Promise.all([
       this.customerCouponUsage.countCouponUsesByCustomer(customerId, coupon.id),
-      this.customerCouponUsage.hasCompletedOrder(customerId),
+      this.customerCouponUsage.hasCompletedOrder(customerId, storeId),
     ]);
     const context = {
       now: this.clock.now(),
