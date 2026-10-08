@@ -5,6 +5,7 @@ import {
 
 export interface IStaffUserResponse {
   id: string;
+  storeId: string;
   name: string;
   email: string;
   role: EStaffRole;
@@ -16,6 +17,7 @@ export interface IStaffUserResponse {
 export function toStaffUserResponse(staffUser: IStaffUser): IStaffUserResponse {
   return {
     id: staffUser.id,
+    storeId: staffUser.storeId,
     name: staffUser.name,
     email: staffUser.email,
     role: staffUser.role,

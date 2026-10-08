@@ -426,6 +426,37 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /auth/staff/signup:
+    post:
+      tags:
+        - Staff auth
+      summary: Create a store and its first owner
+      operationId: signupStaff
+      description: Creates the store (unpublished, slug derived from the name) and the OWNER together, then starts a session like a login (TEN-R07).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffSignupRequest'
+      responses:
+        '201':
+          description: Store and owner created, logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
   /auth/staff/refresh:
     post:
       tags:
@@ -728,6 +759,45 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/SetOpeningHoursRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/store/publish:
+    patch:
+      tags:
+        - Store
+      summary: Publish or unpublish the store (owner)
+      operationId: setStorePublished
+      description: Publishing needs at least one sellable product and one opening interval (STORE_NOT_READY with details.missing, TEN-R06).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - isPublished
+              properties:
+                isPublished:
+                  type: boolean
       responses:
         '200':
           description: Updated
@@ -2576,6 +2646,30 @@ components:
           type: string
           minLength: 1
           maxLength: 128
+    StaffSignupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - storeName
+        - ownerName
+        - email
+        - password
+      properties:
+        storeName:
+          type: string
+          minLength: 2
+          maxLength: 80
+        ownerName:
+          type: string
+          minLength: 2
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
     StaffAuthResponse:
       allOf:
         - $ref: '#/components/schemas/AccessTokenResponse'
@@ -2589,12 +2683,15 @@ components:
       type: object
       required:
         - id
+        - storeId
         - name
         - email
         - role
         - isActive
         - createdAt
       properties:
+        storeId:
+          type: string
         id:
           type: string
         name:
@@ -2764,6 +2861,7 @@ components:
         - deliveryEnabled
         - pickupEnabled
         - pickupEtaMinutes
+        - isPublished
         - status
       properties:
         id:
@@ -2772,6 +2870,8 @@ components:
           type: string
         slug:
           type: string
+        isPublished:
+          type: boolean
         description:
           type: string
         phone:

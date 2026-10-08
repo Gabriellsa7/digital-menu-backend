@@ -1,6 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { IController } from './controller.interface';
-import { IStaffAuthService } from '../../../domain/auth/interfaces/staff-auth.service.interface';
+import {
+  IStaffAuthResult,
+  IStaffAuthService,
+} from '../../../domain/auth/interfaces/staff-auth.service.interface';
 import { UnauthorizedError } from '../../../domain/errors/unauthorized.error';
 import { ICookieSettings } from '../cookies/customer-session.cookie';
 import {
@@ -39,6 +42,11 @@ export class StaffAuthController implements IController {
       authRateLimit(authRateLimitMax),
       this.login,
     );
+    this.router.post(
+      '/auth/staff/signup',
+      authRateLimit(authRateLimitMax),
+      this.signup,
+    );
     this.router.post('/auth/staff/refresh', this.refreshSession);
     this.router.post('/auth/staff/logout', this.logout);
   }
@@ -50,26 +58,54 @@ export class StaffAuthController implements IController {
   ): Promise<void> => {
     try {
       const { email, password } = req.body;
-      const { staffUser, tokens } = await this.staffAuthService.login({
+      const result = await this.staffAuthService.login({
         email,
         password,
         userAgent: req.get('user-agent'),
       });
-      setStaffSessionCookie(
-        res,
-        this.cookieSettings,
-        tokens.refreshToken,
-        tokens.refreshTokenExpiresAt,
-      );
-      res.status(200).json({
-        accessToken: tokens.accessToken,
-        accessTokenExpiresInSeconds: tokens.accessTokenExpiresInSeconds,
-        staffUser: toStaffUserResponse(staffUser),
-      });
+      this.sendAuthResult(res, 200, result);
     } catch (error) {
       next(error);
     }
   };
+
+  signup = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { storeName, ownerName, email, password } = req.body;
+      const result = await this.staffAuthService.signup({
+        storeName,
+        ownerName,
+        email,
+        password,
+        userAgent: req.get('user-agent'),
+      });
+      this.sendAuthResult(res, 201, result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private sendAuthResult(
+    res: Response,
+    status: number,
+    { staffUser, tokens }: IStaffAuthResult,
+  ): void {
+    setStaffSessionCookie(
+      res,
+      this.cookieSettings,
+      tokens.refreshToken,
+      tokens.refreshTokenExpiresAt,
+    );
+    res.status(status).json({
+      accessToken: tokens.accessToken,
+      accessTokenExpiresInSeconds: tokens.accessTokenExpiresInSeconds,
+      staffUser: toStaffUserResponse(staffUser),
+    });
+  }
 
   refreshSession = async (
     req: Request,

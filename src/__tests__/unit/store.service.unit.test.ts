@@ -23,6 +23,7 @@ let others: IStore[];
 let storeRepositoryRead: jest.Mocked<IStoreRepositoryRead>;
 let storeRepositoryWrite: jest.Mocked<IStoreRepositoryWrite>;
 let storageProvider: InMemoryStorageProvider;
+let storeReadiness: { countSellableProducts: jest.Mock };
 let storeService: StoreService;
 
 function aStore(overrides: Partial<IStore> = {}): IStore {
@@ -59,6 +60,7 @@ beforeEach(() => {
       others.push(store);
       return store;
     }),
+    deleteStore: jest.fn(),
     updateStore: jest.fn(async (id, { set = {}, unset = [] }) => {
       if (id !== stored?.id) {
         return null;
@@ -70,6 +72,7 @@ beforeEach(() => {
     }),
   };
   storageProvider = new InMemoryStorageProvider();
+  storeReadiness = { countSellableProducts: jest.fn().mockResolvedValue(3) };
   storeService = new StoreService({
     storeRepositoryRead,
     storeRepositoryWrite,
@@ -79,6 +82,7 @@ beforeEach(() => {
       publishProductAvailabilityChanged: jest.fn(),
       publishOptionAvailabilityChanged: jest.fn(),
     },
+    storeReadiness,
     clock,
   });
 });
@@ -339,5 +343,35 @@ describe('When the scheduler refreshes the store status (STO-R05)', () => {
     expect(status.manualStatus).toBe(EManualStatus.AUTO);
     expect(stored?.manualStatus).toBe(EManualStatus.AUTO);
     expect(stored?.manualStatusUntil).toBeUndefined();
+  });
+});
+
+describe('When the owner publishes the store (TEN-R06)', () => {
+  it('should publish a store with products and opening hours', async () => {
+    const { store } = await storeService.setPublished(STORE_ID, true);
+
+    expect(store.isPublished).toBe(true);
+    expect(storeReadiness.countSellableProducts).toHaveBeenCalledWith(STORE_ID);
+  });
+
+  it('should list what is missing with STORE_NOT_READY', async () => {
+    stored = aStore({ openingHours: [] });
+    storeReadiness.countSellableProducts.mockResolvedValue(0);
+
+    await expect(storeService.setPublished(STORE_ID, true)).rejects.toMatchObject(
+      {
+        code: 'STORE_NOT_READY',
+        details: { missing: ['products', 'openingHours'] },
+      },
+    );
+  });
+
+  it('should unpublish without any check', async () => {
+    stored = aStore({ isPublished: true, openingHours: [] });
+    storeReadiness.countSellableProducts.mockResolvedValue(0);
+
+    const { store } = await storeService.setPublished(STORE_ID, false);
+
+    expect(store.isPublished).toBe(false);
   });
 });

@@ -5,6 +5,8 @@ import { Mstore } from '../../infrastructure/db/mongo/models/store.model';
 import { as } from '../helpers/http.helper';
 import { StoreServiceFactory } from '../../infrastructure/config/factories/store.service.factory';
 import { createStore, loginAs } from '../helpers/staff-session.helper';
+import { createCategory } from '../helpers/catalog.helper';
+import { ProductServiceFactory } from '../../infrastructure/config/factories/product.service.factory';
 
 const EVERY_DAY_ALL_DAY = [0, 1, 2, 3, 4, 5, 6].flatMap((weekday) => [
   { weekday, opensAt: '00:00', closesAt: '12:00' },
@@ -173,5 +175,54 @@ describe('When staff toggles the store status', () => {
     const { body } = await as(accessToken).get('/admin/store');
 
     expect(body.status.isOpenNow).toBe(false);
+  });
+});
+
+describe('When the owner publishes the store (TEN-R06)', () => {
+  it('should refuse until the store has products and opening hours', async () => {
+    const store = await StoreServiceFactory.create().createStore({
+      name: 'Nova Loja',
+    });
+    const { accessToken } = await loginAs(EStaffRole.OWNER, store.id);
+
+    const notReady = await as(accessToken)
+      .patch('/admin/store/publish')
+      .send({ isPublished: true });
+    await as(accessToken)
+      .put('/admin/store/opening-hours')
+      .send({ openingHours: EVERY_DAY_ALL_DAY });
+    const category = await createCategory('Burgers', store.id);
+    await ProductServiceFactory.create().createProduct({
+      storeId: store.id,
+      categoryId: category.id,
+      name: 'Smash',
+      description: '',
+      priceInCents: 3000,
+      optionGroupIds: [],
+      isAvailable: true,
+      isActive: true,
+    });
+    const published = await as(accessToken)
+      .patch('/admin/store/publish')
+      .send({ isPublished: true });
+    const publicRead = await supertest(app.app).get('/public/stores/nova-loja');
+
+    expect(notReady.statusCode).toBe(422);
+    expect(notReady.body).toMatchObject({
+      code: 'STORE_NOT_READY',
+      details: { missing: ['products', 'openingHours'] },
+    });
+    expect(published.body.isPublished).toBe(true);
+    expect(publicRead.statusCode).toBe(200);
+  });
+
+  it('should answer 403 to a STAFF user', async () => {
+    const { accessToken } = await loginAs(EStaffRole.STAFF);
+
+    const { statusCode } = await as(accessToken)
+      .patch('/admin/store/publish')
+      .send({ isPublished: false });
+
+    expect(statusCode).toBe(403);
   });
 });

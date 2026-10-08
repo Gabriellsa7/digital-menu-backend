@@ -1,4 +1,6 @@
 import { StaffAuthService } from '../../domain/auth/service/staff-auth.service';
+import { ConflictError } from '../../domain/errors/conflict.error';
+import { IStoreService } from '../../domain/store/interfaces/store.service.interface';
 import { IAuthSessionService } from '../../domain/auth/interfaces/auth-session.service.interface';
 import { ESubjectType } from '../../domain/auth/interfaces/auth-subject.interface';
 import { IStaffUserService } from '../../domain/staff-user/interfaces/staff-user.service.interface';
@@ -32,7 +34,13 @@ function aStaffUser(overrides: Partial<IStaffUser> = {}): IStaffUser {
 }
 
 let staffUserService: jest.Mocked<
-  Pick<IStaffUserService, 'verifyStaffUserCredentials' | 'getStaffUserById'>
+  Pick<
+    IStaffUserService,
+    'verifyStaffUserCredentials' | 'getStaffUserById' | 'createStaffUser'
+  >
+>;
+let storeService: jest.Mocked<
+  Pick<IStoreService, 'createStore' | 'deleteStore'>
 >;
 let authSessionService: jest.Mocked<IAuthSessionService>;
 let staffAuthService: StaffAuthService;
@@ -41,6 +49,13 @@ beforeEach(() => {
   staffUserService = {
     verifyStaffUserCredentials: jest.fn().mockResolvedValue(aStaffUser()),
     getStaffUserById: jest.fn().mockResolvedValue(aStaffUser()),
+    createStaffUser: jest.fn().mockResolvedValue(aStaffUser()),
+  };
+  storeService = {
+    createStore: jest
+      .fn()
+      .mockResolvedValue({ id: 'store-1', slug: 'casa-brasa' }),
+    deleteStore: jest.fn(),
   };
   authSessionService = {
     startSession: jest.fn().mockResolvedValue(TOKENS),
@@ -57,6 +72,7 @@ beforeEach(() => {
   };
   staffAuthService = new StaffAuthService({
     staffUserService: staffUserService as unknown as IStaffUserService,
+    storeService: storeService as unknown as IStoreService,
     authSessionService,
   });
 });
@@ -78,6 +94,43 @@ describe('When a staff user logs in', () => {
       },
       userAgent: undefined,
     });
+  });
+});
+
+describe('When an owner signs up a new store (TEN-R07)', () => {
+  const SIGNUP = {
+    storeName: 'Casa Brasa',
+    ownerName: 'Nami',
+    email: 'nami@menu.dev',
+    password: 'secret123',
+  };
+
+  it('should create the store, its owner, and a session', async () => {
+    const result = await staffAuthService.signup(SIGNUP);
+
+    expect(storeService.createStore).toHaveBeenCalledWith({
+      name: 'Casa Brasa',
+    });
+    expect(staffUserService.createStaffUser).toHaveBeenCalledWith({
+      storeId: 'store-1',
+      name: 'Nami',
+      email: 'nami@menu.dev',
+      password: 'secret123',
+      role: EStaffRole.OWNER,
+    });
+    expect(result.tokens).toBe(TOKENS);
+  });
+
+  it('should delete the store when the owner cannot be created', async () => {
+    staffUserService.createStaffUser.mockRejectedValue(
+      new ConflictError('E-mail is already in use', 'EMAIL_ALREADY_IN_USE'),
+    );
+
+    await expect(staffAuthService.signup(SIGNUP)).rejects.toMatchObject({
+      code: 'EMAIL_ALREADY_IN_USE',
+    });
+    expect(storeService.deleteStore).toHaveBeenCalledWith('store-1');
+    expect(authSessionService.startSession).not.toHaveBeenCalled();
   });
 });
 

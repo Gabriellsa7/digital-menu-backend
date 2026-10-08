@@ -15,6 +15,10 @@ export class StoreRepositoryWrite implements IStoreRepositoryWrite {
     return createdStore;
   }
 
+  async deleteStore(id: string): Promise<void> {
+    await Mstore.deleteOne({ id });
+  }
+
   async updateStore(
     id: string,
     { set = {}, unset = [] }: IParamsUpdateStoreFields,

@@ -40,6 +40,7 @@ export class StoreController implements IController {
       this.setOpeningHours,
     );
     this.router.patch('/admin/store/status', ...staff, this.setManualStatus);
+    this.router.patch('/admin/store/publish', ...owner, this.setPublished);
     this.router.post(
       '/admin/store/images/:kind',
       ...owner,
@@ -116,6 +117,22 @@ export class StoreController implements IController {
       const storeWithStatus = await this.storeService.setManualStatus(
         staffStoreId(req),
         req.body.manualStatus,
+      );
+      res.status(200).json(toStoreResponse(storeWithStatus));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  setPublished = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const storeWithStatus = await this.storeService.setPublished(
+        staffStoreId(req),
+        req.body.isPublished,
       );
       res.status(200).json(toStoreResponse(storeWithStatus));
     } catch (error) {
