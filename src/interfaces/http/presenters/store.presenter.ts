@@ -20,6 +20,7 @@ export interface IStoreResponse {
   deliveryEnabled: boolean;
   pickupEnabled: boolean;
   pickupEtaMinutes: number;
+  isPublished: boolean;
   status: IStoreStatus;
 }
 
@@ -46,6 +47,7 @@ export function toStoreResponse({
     deliveryEnabled: store.deliveryEnabled,
     pickupEnabled: store.pickupEnabled,
     pickupEtaMinutes: store.pickupEtaMinutes,
+    isPublished: store.isPublished,
     status,
   };
 }

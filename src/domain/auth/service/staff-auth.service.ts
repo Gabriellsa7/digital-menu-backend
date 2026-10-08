@@ -1,8 +1,9 @@
 import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
 import { NotFoundError } from '../../errors/not-found.error';
 import { UnauthorizedError } from '../../errors/unauthorized.error';
-import { IStaffUser } from '../../staff-user/interfaces/staff-user.interface';
+import { EStaffRole, IStaffUser } from '../../staff-user/interfaces/staff-user.interface';
 import { IStaffUserService } from '../../staff-user/interfaces/staff-user.service.interface';
+import { IStoreService } from '../../store/interfaces/store.service.interface';
 import { ESubjectType } from '../interfaces/auth-subject.interface';
 import {
   IAuthSessionService,
@@ -12,16 +13,23 @@ import {
   IParamsRefreshStaffSession,
   IParamsStaffAuthService,
   IParamsStaffLogin,
+  IParamsStaffSignup,
   IStaffAuthResult,
   IStaffAuthService,
 } from '../interfaces/staff-auth.service.interface';
 
 export class StaffAuthService implements IStaffAuthService {
   private staffUserService: IStaffUserService;
+  private storeService: IStoreService;
   private authSessionService: IAuthSessionService;
 
-  constructor({ staffUserService, authSessionService }: IParamsStaffAuthService) {
+  constructor({
+    staffUserService,
+    storeService,
+    authSessionService,
+  }: IParamsStaffAuthService) {
     this.staffUserService = staffUserService;
+    this.storeService = storeService;
     this.authSessionService = authSessionService;
   }
 
@@ -35,6 +43,37 @@ export class StaffAuthService implements IStaffAuthService {
       email,
       password,
     });
+    return this.startSession(staffUser, userAgent);
+  }
+
+  @ErrorHandler()
+  async signup({
+    storeName,
+    ownerName,
+    email,
+    password,
+    userAgent,
+  }: IParamsStaffSignup): Promise<IStaffAuthResult> {
+    const store = await this.storeService.createStore({ name: storeName });
+    const owner = await this.staffUserService
+      .createStaffUser({
+        storeId: store.id,
+        name: ownerName,
+        email,
+        password,
+        role: EStaffRole.OWNER,
+      })
+      .catch(async (error) => {
+        await this.storeService.deleteStore(store.id);
+        throw error;
+      });
+    return this.startSession(owner, userAgent);
+  }
+
+  private async startSession(
+    staffUser: IStaffUser,
+    userAgent?: string,
+  ): Promise<IStaffAuthResult> {
     const tokens = await this.authSessionService.startSession({
       subject: {
         subjectId: staffUser.id,

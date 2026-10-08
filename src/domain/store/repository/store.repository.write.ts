@@ -14,6 +14,7 @@ export interface IParamsUpdateStoreFields {
 
 export interface IStoreRepositoryWrite {
   createStore(store: IStore): Promise<IStore>;
+  deleteStore(id: string): Promise<void>;
   updateStore(
     id: string,
     fields: IParamsUpdateStoreFields,

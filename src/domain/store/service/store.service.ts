@@ -12,6 +12,7 @@ import { BusinessRuleError } from '../../errors/business-rule.error';
 import { ConflictError } from '../../errors/conflict.error';
 import { NotFoundError } from '../../errors/not-found.error';
 import { IStoreEventPublisher } from '../events/store.event.publisher';
+import { IStoreReadiness } from '../interfaces/store-readiness.interface';
 import {
   EManualStatus,
   IOpeningHour,
@@ -50,6 +51,7 @@ export class StoreService implements IStoreService {
   private storeRepositoryWrite: IStoreRepositoryWrite;
   private storageProvider: IStorageProvider;
   private storeEventPublisher: IStoreEventPublisher;
+  private storeReadiness: IStoreReadiness;
   private clock: IClock;
 
   constructor({
@@ -57,12 +59,14 @@ export class StoreService implements IStoreService {
     storeRepositoryWrite,
     storageProvider,
     storeEventPublisher,
+    storeReadiness,
     clock,
   }: IParamsStoreService) {
     this.storeRepositoryRead = storeRepositoryRead;
     this.storeRepositoryWrite = storeRepositoryWrite;
     this.storageProvider = storageProvider;
     this.storeEventPublisher = storeEventPublisher;
+    this.storeReadiness = storeReadiness;
     this.clock = clock;
   }
 
@@ -129,6 +133,31 @@ export class StoreService implements IStoreService {
   @ErrorHandler()
   async listActiveStores(): Promise<IStore[]> {
     return this.storeRepositoryRead.listActiveStores();
+  }
+
+  @ErrorHandler()
+  async deleteStore(storeId: string): Promise<void> {
+    await this.storeRepositoryWrite.deleteStore(storeId);
+  }
+
+  @ErrorHandler()
+  async setPublished(
+    storeId: string,
+    isPublished: boolean,
+  ): Promise<IStoreWithStatus> {
+    const store = await this.getStore(storeId);
+    if (isPublished) {
+      await this.assertReadyToPublish(store);
+    }
+    const updated = await this.updateStoreFields(storeId, {
+      set: { isPublished },
+    });
+    Logger.info('Store publication changed', {
+      eventName: 'store.publication_changed',
+      storeId,
+      isPublished,
+    });
+    return this.withStatus(updated);
   }
 
   @ErrorHandler()
@@ -254,6 +283,22 @@ export class StoreService implements IStoreService {
       throw new BusinessRuleError(
         `Unknown timezone "${timezone}"`,
         'INVALID_TIMEZONE',
+      );
+    }
+  }
+
+  private async assertReadyToPublish(store: IStore): Promise<void> {
+    const sellableProducts =
+      await this.storeReadiness.countSellableProducts(store.id);
+    const missing = [
+      ...(sellableProducts === 0 ? ['products'] : []),
+      ...(store.openingHours.length === 0 ? ['openingHours'] : []),
+    ];
+    if (missing.length > 0) {
+      throw new BusinessRuleError(
+        'The store is not ready to be published',
+        'STORE_NOT_READY',
+        { missing },
       );
     }
   }

@@ -7,6 +7,7 @@ import {
 import { IStoreEventPublisher } from '../events/store.event.publisher';
 import { IStoreRepositoryRead } from '../repository/store.repository.read';
 import { IStoreRepositoryWrite } from '../repository/store.repository.write';
+import { IStoreReadiness } from './store-readiness.interface';
 import {
   EManualStatus,
   IOpeningHour,
@@ -47,6 +48,7 @@ export interface IParamsStoreService {
   storeRepositoryWrite: IStoreRepositoryWrite;
   storageProvider: IStorageProvider;
   storeEventPublisher: IStoreEventPublisher;
+  storeReadiness: IStoreReadiness;
   clock: IClock;
 }
 
@@ -57,6 +59,11 @@ export interface IStoreService {
   getStoreWithStatus(storeId: string): Promise<IStoreWithStatus>;
   getPublishedStoreBySlug(slug: string): Promise<IStoreWithStatus>;
   listActiveStores(): Promise<IStore[]>;
+  deleteStore(storeId: string): Promise<void>;
+  setPublished(
+    storeId: string,
+    isPublished: boolean,
+  ): Promise<IStoreWithStatus>;
   updateStore(storeId: string, params: IParamsUpdateStore): Promise<IStore>;
   setOpeningHours(
     storeId: string,

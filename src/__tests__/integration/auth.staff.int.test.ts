@@ -2,7 +2,10 @@ import supertest from 'supertest';
 import { app } from '../../../jest/setup-integration-tests';
 import { EStaffRole } from '../../domain/staff-user/interfaces/staff-user.interface';
 import { StaffUserServiceFactory } from '../../infrastructure/config/factories/staff-user.service.factory';
+import { randomUUID } from 'crypto';
+import { Mstore } from '../../infrastructure/db/mongo/models/store.model';
 import { findCookie } from '../helpers/customer-session.helper';
+import { as } from '../helpers/http.helper';
 import {
   STAFF_PASSWORD,
   createStaffUser,
@@ -118,5 +121,45 @@ describe('When a staff user logs out', () => {
 
     expect(logout.statusCode).toBe(204);
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('When an owner signs up a new store (TEN-R07)', () => {
+  const SIGNUP = {
+    storeName: 'Casa Brasa',
+    ownerName: 'Nami',
+    password: 'secret123',
+  };
+
+  it('should create an unpublished store and log the owner in', async () => {
+    const email = `${randomUUID()}@menu.dev`;
+
+    const { body, statusCode, headers } = await supertest(app.app)
+      .post('/auth/staff/signup')
+      .send({ ...SIGNUP, email });
+    const store = await as(body.accessToken).get('/admin/store');
+
+    expect(statusCode).toBe(201);
+    expect(headers['set-cookie']).toEqual(
+      expect.arrayContaining([expect.stringContaining('dm_rt_staff=')]),
+    );
+    expect(body.staffUser).toMatchObject({ role: 'OWNER', email });
+    expect(store.body).toMatchObject({
+      id: body.staffUser.storeId,
+      name: 'Casa Brasa',
+      isPublished: false,
+    });
+  });
+
+  it('should not leave a store behind when the e-mail is taken', async () => {
+    const existing = await createStaffUser(EStaffRole.OWNER);
+    const storesBefore = await Mstore.countDocuments();
+
+    const { statusCode } = await supertest(app.app)
+      .post('/auth/staff/signup')
+      .send({ ...SIGNUP, email: existing.email });
+
+    expect(statusCode).toBe(409);
+    await expect(Mstore.countDocuments()).resolves.toBe(storesBefore);
   });
 });
