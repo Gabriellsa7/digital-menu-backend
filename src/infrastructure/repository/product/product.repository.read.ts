@@ -23,20 +23,25 @@ export class ProductRepositoryRead implements IProductRepositoryRead {
     ).lean<IProduct>();
   }
 
-  async findProductsByIds(ids: string[]): Promise<IProduct[]> {
+  async findProductsByIds(
+    storeId: string,
+    ids: string[],
+  ): Promise<IProduct[]> {
     return Mproduct.find(
-      { id: { $in: ids } },
+      { storeId, id: { $in: ids } },
       HIDE_MONGO_INTERNAL_FIELDS,
     ).lean<IProduct[]>();
   }
 
   async listProducts({
+    storeId,
     categoryId,
     search,
     limit,
     offset,
   }: IParamsListProducts): Promise<IPaginatedResult<IProduct>> {
     const filter: RootFilterQuery<IMProduct> = {
+      storeId,
       ...(categoryId && { categoryId }),
       ...(search && {
         name: { $regex: escapeRegex(search.trim()), $options: 'i' },
@@ -59,8 +64,11 @@ export class ProductRepositoryRead implements IProductRepositoryRead {
       .lean<IProduct[]>();
   }
 
-  async listActiveProducts(): Promise<IProduct[]> {
-    return Mproduct.find({ isActive: true }, HIDE_MONGO_INTERNAL_FIELDS)
+  async listActiveProducts(storeId: string): Promise<IProduct[]> {
+    return Mproduct.find(
+      { storeId, isActive: true },
+      HIDE_MONGO_INTERNAL_FIELDS,
+    )
       .sort(DISPLAY_ORDER)
       .lean<IProduct[]>();
   }

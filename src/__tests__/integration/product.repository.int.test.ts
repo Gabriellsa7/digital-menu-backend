@@ -13,6 +13,7 @@ function createProduct(overrides: Partial<IProduct> = {}) {
   const now = new Date();
   return productRepositoryWrite.createProduct({
     id: randomUUID(),
+    storeId: 'store-1',
     categoryId: 'burgers',
     name: 'Smash',
     description: '',
@@ -39,12 +40,14 @@ describe('When we list products', () => {
     await createProduct({ name: 'Smash kids', categoryId: 'kids' });
 
     const { items, total } = await productRepositoryRead.listProducts({
+      storeId: 'store-1',
       categoryId: 'burgers',
       search: 'smash (',
       limit: 10,
       offset: 0,
     });
     const page = await productRepositoryRead.listProducts({
+      storeId: 'store-1',
       categoryId: 'burgers',
       limit: 1,
       offset: 1,

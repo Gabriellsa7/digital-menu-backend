@@ -1,5 +1,6 @@
 import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
 import { ICategoryService } from '../../category/interfaces/category.service.interface';
+import { IStoreService } from '../../store/interfaces/store.service.interface';
 import { NotFoundError } from '../../errors/not-found.error';
 import { IOptionGroup } from '../../option-group/interfaces/option-group.interface';
 import { IOptionGroupService } from '../../option-group/interfaces/option-group.service.interface';
@@ -13,25 +14,29 @@ import {
 import { toMenuProduct } from '../menu-product.factory';
 
 export class MenuService implements IMenuService {
+  private storeService: IStoreService;
   private categoryService: ICategoryService;
   private productService: IProductService;
   private optionGroupService: IOptionGroupService;
 
   constructor({
+    storeService,
     categoryService,
     productService,
     optionGroupService,
   }: IParamsMenuService) {
+    this.storeService = storeService;
     this.categoryService = categoryService;
     this.productService = productService;
     this.optionGroupService = optionGroupService;
   }
 
   @ErrorHandler()
-  async getMenu(): Promise<IMenu> {
+  async getMenu(storeSlug: string): Promise<IMenu> {
+    const storeId = await this.publishedStoreId(storeSlug);
     const [categories, products] = await Promise.all([
-      this.categoryService.listCategories(),
-      this.productService.listActiveProducts(),
+      this.categoryService.listCategories(storeId),
+      this.productService.listActiveProducts(storeId),
     ]);
     const optionGroupsById = await this.optionGroupsFor(products);
 
@@ -50,9 +55,17 @@ export class MenuService implements IMenuService {
   }
 
   @ErrorHandler()
-  async getMenuProduct(productId: string): Promise<IMenuProduct> {
-    const product = await this.productService.getProductById(productId);
+  async getMenuProduct(
+    storeSlug: string,
+    productId: string,
+  ): Promise<IMenuProduct> {
+    const storeId = await this.publishedStoreId(storeSlug);
+    const product = await this.productService.getProductById(
+      storeId,
+      productId,
+    );
     const category = await this.categoryService.getCategoryById(
+      storeId,
       product.categoryId,
     );
     if (!product.isActive || !category.isActive) {
@@ -60,6 +73,12 @@ export class MenuService implements IMenuService {
     }
 
     return toMenuProduct(product, await this.optionGroupsFor([product]));
+  }
+
+  private async publishedStoreId(storeSlug: string): Promise<string> {
+    const { store } =
+      await this.storeService.getPublishedStoreBySlug(storeSlug);
+    return store.id;
   }
 
   private async optionGroupsFor(

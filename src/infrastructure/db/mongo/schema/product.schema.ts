@@ -8,6 +8,7 @@ export interface IMProduct extends IProduct {
 export const productSchema = new mongoose.Schema<IMProduct>(
   {
     id: { type: String, required: true, unique: true },
+    storeId: { type: String, required: true },
     categoryId: { type: String, required: true },
     name: { type: String, required: true },
     description: { type: String, default: '' },
@@ -23,5 +24,5 @@ export const productSchema = new mongoose.Schema<IMProduct>(
   { timestamps: true },
 );
 
-productSchema.index({ categoryId: 1, position: 1 });
+productSchema.index({ storeId: 1, categoryId: 1, position: 1 });
 productSchema.index({ optionGroupIds: 1 });

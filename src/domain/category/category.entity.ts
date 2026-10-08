@@ -2,6 +2,7 @@ import { ICategory } from './interfaces/category.interface';
 
 export class Category implements ICategory {
   public readonly id: string;
+  public readonly storeId: string;
   public readonly name: string;
   public readonly position: number;
   public readonly isActive: boolean;
@@ -10,6 +11,7 @@ export class Category implements ICategory {
 
   constructor(props: ICategory) {
     this.id = props.id;
+    this.storeId = props.storeId;
     this.name = props.name.trim();
     this.position = props.position;
     this.isActive = props.isActive;

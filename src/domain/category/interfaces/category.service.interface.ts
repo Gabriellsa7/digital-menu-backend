@@ -5,11 +5,13 @@ import { ICategory } from './category.interface';
 import { ICategoryUsage } from './category-usage.interface';
 
 export interface IParamsCreateCategory {
+  storeId: string;
   name: string;
   isActive?: boolean;
 }
 
 export interface IParamsUpdateCategory {
+  storeId: string;
   id: string;
   name?: string;
   isActive?: boolean;
@@ -23,10 +25,10 @@ export interface IParamsCategoryService {
 }
 
 export interface ICategoryService {
-  listCategories(): Promise<ICategory[]>;
-  getCategoryById(id: string): Promise<ICategory>;
+  listCategories(storeId: string): Promise<ICategory[]>;
+  getCategoryById(storeId: string, id: string): Promise<ICategory>;
   createCategory(params: IParamsCreateCategory): Promise<ICategory>;
   updateCategory(params: IParamsUpdateCategory): Promise<ICategory>;
-  deleteCategory(id: string): Promise<void>;
-  reorderCategories(orderedIds: string[]): Promise<ICategory[]>;
+  deleteCategory(storeId: string, id: string): Promise<void>;
+  reorderCategories(storeId: string, orderedIds: string[]): Promise<ICategory[]>;
 }

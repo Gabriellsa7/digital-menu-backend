@@ -10,6 +10,7 @@ export const CASE_INSENSITIVE_COLLATION = { locale: 'pt', strength: 2 };
 export const categorySchema = new mongoose.Schema<IMCategory>(
   {
     id: { type: String, required: true, unique: true },
+    storeId: { type: String, required: true },
     name: { type: String, required: true },
     position: { type: Number, required: true },
     isActive: { type: Boolean, required: true },
@@ -18,7 +19,7 @@ export const categorySchema = new mongoose.Schema<IMCategory>(
 );
 
 categorySchema.index(
-  { name: 1 },
+  { storeId: 1, name: 1 },
   { unique: true, collation: CASE_INSENSITIVE_COLLATION },
 );
-categorySchema.index({ position: 1 });
+categorySchema.index({ storeId: 1, position: 1 });

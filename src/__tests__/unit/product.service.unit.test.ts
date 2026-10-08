@@ -11,6 +11,7 @@ import { FixedClock } from '../helpers/fixed.clock';
 
 const clock = new FixedClock();
 const PRODUCT_DATA = {
+  storeId: 'store-1',
   categoryId: 'burgers',
   name: 'Smash',
   description: 'Two patties',
@@ -185,6 +186,7 @@ describe('When we update a product', () => {
 describe('When we change the availability or delete a product', () => {
   it('should mark the product as sold out', async () => {
     const product = await productService.setProductAvailability({
+      storeId: 'store-1',
       id: 'product-1',
       isAvailable: false,
     });
@@ -195,8 +197,34 @@ describe('When we change the availability or delete a product', () => {
   it('should throw NotFoundError when deleting an unknown product', async () => {
     productRepositoryRead.findProductById.mockResolvedValue(null);
 
-    await expect(productService.deleteProduct('missing')).rejects.toThrow(
+    await expect(productService.deleteProduct('store-1', 'missing')).rejects.toThrow(
       NotFoundError,
+    );
+  });
+});
+
+describe('When a product of another store is used (TEN-R04)', () => {
+  it('should answer not found without touching it', async () => {
+    productRepositoryRead.findProductById.mockResolvedValue(
+      aProduct({ storeId: 'store-2' }),
+    );
+
+    await expect(
+      productService.setProductAvailability({
+        storeId: 'store-1',
+        id: 'product-1',
+        isAvailable: false,
+      }),
+    ).rejects.toThrow(NotFoundError);
+    expect(productRepositoryWrite.updateProductById).not.toHaveBeenCalled();
+  });
+
+  it('should check the category inside the same store (TEN-R05)', async () => {
+    await productService.createProduct(PRODUCT_DATA);
+
+    expect(categoryService.getCategoryById).toHaveBeenCalledWith(
+      'store-1',
+      'burgers',
     );
   });
 });
@@ -209,9 +237,12 @@ describe('When we reorder products in a category', () => {
     ]);
 
     await expect(
-      productService.reorderProductsInCategory('burgers', ['b']),
+      productService.reorderProductsInCategory('store-1', 'burgers', ['b']),
     ).rejects.toMatchObject({ code: 'INVALID_ORDER' });
-    await productService.reorderProductsInCategory('burgers', ['b', 'a']);
+    await productService.reorderProductsInCategory('store-1', 'burgers', [
+      'b',
+      'a',
+    ]);
     expect(
       productRepositoryWrite.reorderProductsInCategory,
     ).toHaveBeenCalledWith('burgers', ['b', 'a']);
@@ -234,7 +265,11 @@ describe('When we change the product image (PRD-R03, R04)', () => {
       aProduct({ imageUrl: previous.url, imagePublicId: previous.publicId }),
     );
 
-    const product = await productService.setProductImage('product-1', IMAGE);
+    const product = await productService.setProductImage(
+      'store-1',
+      'product-1',
+      IMAGE,
+    );
 
     expect(product.imagePublicId).not.toBe(previous.publicId);
     expect(storageProvider.images.has(previous.publicId)).toBe(false);
@@ -247,7 +282,7 @@ describe('When we change the product image (PRD-R03, R04)', () => {
     ['a 4 MB file', { ...IMAGE, size: 4 * 1024 * 1024 }, 'IMAGE_TOO_LARGE'],
   ])('should reject %s', async (_case, file, code) => {
     await expect(
-      productService.setProductImage('product-1', file),
+      productService.setProductImage('store-1', 'product-1', file),
     ).rejects.toMatchObject({ code });
   });
 
@@ -260,7 +295,7 @@ describe('When we change the product image (PRD-R03, R04)', () => {
       aProduct({ imagePublicId: previous.publicId }),
     );
 
-    await productService.removeProductImage('product-1');
+    await productService.removeProductImage('store-1', 'product-1');
 
     expect(storageProvider.images.size).toBe(0);
     expect(productRepositoryWrite.updateProductById).toHaveBeenCalledWith(
@@ -278,7 +313,7 @@ describe('When we change the product image (PRD-R03, R04)', () => {
       aProduct({ imagePublicId: previous.publicId }),
     );
 
-    await productService.deleteProduct('product-1');
+    await productService.deleteProduct('store-1', 'product-1');
 
     expect(storageProvider.images.size).toBe(0);
   });

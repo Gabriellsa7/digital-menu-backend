@@ -634,18 +634,14 @@ paths:
           $ref: '#/components/responses/ServerError'
 
   /public/stores/{slug}:
+    parameters:
+      - $ref: '#/components/parameters/StoreSlug'
     get:
       tags:
         - Store
       summary: Get a published store by its slug, with its current status
       operationId: getPublicStore
       description: Unknown, inactive, or unpublished slugs answer 404 STORE_NOT_FOUND (TEN-R06).
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           description: The store
@@ -1572,13 +1568,15 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/menu:
+  /public/stores/{slug}/menu:
+    parameters:
+      - $ref: '#/components/parameters/StoreSlug'
     get:
       tags:
         - Menu
-      summary: Get the whole menu in display order
+      summary: Get the whole menu of a published store in display order
       operationId: getMenu
-      description: Active categories with their active products and inlined option groups. Sold-out products are listed with `isAvailable=false` (PRD-R05).
+      description: Active categories with their active products and inlined option groups. Sold-out products are listed with `isAvailable=false` (PRD-R05). Unknown or unpublished slug → 404 STORE_NOT_FOUND.
       responses:
         '200':
           description: The menu
@@ -1586,11 +1584,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Menu'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/products/{id}:
+  /public/stores/{slug}/products/{id}:
     parameters:
+      - $ref: '#/components/parameters/StoreSlug'
       - $ref: '#/components/parameters/Id'
     get:
       tags:
@@ -2225,6 +2226,14 @@ components:
       bearerFormat: JWT
 
   parameters:
+    StoreSlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The slug of the store (e.g. casa-brasa)
+
     AddressId:
       name: addressId
       in: path
