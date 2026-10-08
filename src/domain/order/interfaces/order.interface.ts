@@ -56,6 +56,12 @@ export interface IOrderItem {
   totalInCents: number;
 }
 
+export interface IOrderStoreSnapshot {
+  name: string;
+  slug: string;
+  logoUrl?: string;
+}
+
 export interface IOrderCustomerSnapshot {
   name: string;
   phone: string;
@@ -76,6 +82,8 @@ export interface IOrderCouponSnapshot {
 
 export interface IOrder {
   id: string;
+  storeId: string;
+  storeSnapshot: IOrderStoreSnapshot;
   number: number;
   customerId: string;
   customerSnapshot: IOrderCustomerSnapshot;

@@ -206,6 +206,7 @@ async function seedCustomerAndOrders(): Promise<void> {
       EOrderStatus.COMPLETED,
     ]) {
       await orderService.changeOrderStatus({
+        storeId: store.id,
         orderId: completed.id,
         staffId: 'seed',
         status,
@@ -225,6 +226,7 @@ async function seedCustomerAndOrders(): Promise<void> {
       changeForInCents: 10000,
     });
     await orderService.changeOrderStatus({
+      storeId: store.id,
       orderId: preparing.id,
       staffId: 'seed',
       status: EOrderStatus.PREPARING,

@@ -95,6 +95,11 @@ export class OrderPricingService implements IOrderPricingService {
     this.assertValidChange(params, totalInCents);
 
     return {
+      store: {
+        name: store.name,
+        slug: store.slug,
+        ...(store.logoUrl && { logoUrl: store.logoUrl }),
+      },
       items,
       fulfillmentType: params.fulfillmentType,
       ...(deliveryAddress && { deliveryAddress }),

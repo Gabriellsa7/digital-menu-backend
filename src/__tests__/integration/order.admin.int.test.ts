@@ -1,7 +1,7 @@
 import { EStaffRole } from '../../domain/staff-user/interfaces/staff-user.interface';
 import { setupCheckout } from '../helpers/checkout.helper';
 import { as } from '../helpers/http.helper';
-import { loginAs } from '../helpers/staff-session.helper';
+import { createStore, loginAs } from '../helpers/staff-session.helper';
 
 let checkout: Awaited<ReturnType<typeof setupCheckout>>;
 let staffToken: string;
@@ -126,6 +126,33 @@ describe('When staff reads the board', () => {
     expect(search.body.items[0]).toMatchObject({
       id: active,
       customerName: 'Nami',
+    });
+  });
+});
+
+describe('When staff of another store looks at the orders (TEN-R04)', () => {
+  it('should not see nor change them', async () => {
+    const orderId = await placeOrder('PICKUP');
+    const otherStore = await createStore('Pizza Boa');
+    const { accessToken: otherToken } = await loginAs(
+      EStaffRole.STAFF,
+      otherStore.id,
+    );
+
+    const active = await as(otherToken).get('/admin/orders/active');
+    const detail = await as(otherToken).get(`/admin/orders/${orderId}`);
+    const moved = await as(otherToken)
+      .patch(`/admin/orders/${orderId}/status`)
+      .send({ status: 'PREPARING' });
+    const mine = await as(staffToken).get(`/admin/orders/${orderId}`);
+
+    expect(active.body).toEqual([]);
+    expect(detail.statusCode).toBe(404);
+    expect(moved.statusCode).toBe(404);
+    expect(mine.body).toMatchObject({
+      storeId: checkout.storeId,
+      status: 'PLACED',
+      store: { slug: expect.any(String) },
     });
   });
 });

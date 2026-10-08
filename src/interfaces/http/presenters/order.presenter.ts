@@ -25,7 +25,7 @@ function toOrderItemResponse(item: IOrderItem): IOrderItem {
   };
 }
 
-export function toOrderQuoteResponse(quote: IOrderQuote) {
+export function toOrderQuoteResponse({ store, ...quote }: IOrderQuote) {
   return { ...quote, items: quote.items.map(toOrderItemResponse) };
 }
 
@@ -38,9 +38,10 @@ function toPaymentResponse({ pix, paidAt, ...payment }: IPayment) {
 }
 
 export function toOrderResponse(order: IOrder) {
-  const { idempotencyKey, updatedAt, ...response } = order;
+  const { idempotencyKey, updatedAt, storeSnapshot, ...response } = order;
   return {
     ...response,
+    store: storeSnapshot,
     payment: toPaymentResponse(order.payment),
     items: order.items.map(toOrderItemResponse),
     statusHistory: order.statusHistory.map(({ status, at, by, reason }) => ({
@@ -55,6 +56,7 @@ export function toOrderResponse(order: IOrder) {
 export function toOrderSummaryResponse(order: IOrder) {
   return {
     id: order.id,
+    store: order.storeSnapshot,
     number: order.number,
     status: order.status,
     fulfillmentType: order.fulfillmentType,

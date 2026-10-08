@@ -5,6 +5,7 @@ import {
 import { EOrderStatus, IOrder } from '../interfaces/order.interface';
 
 export interface IParamsSearchOrders extends IPagination {
+  storeId: string;
   status?: EOrderStatus;
   from?: Date;
   to?: Date;
@@ -20,8 +21,9 @@ export interface IOrderRepositoryRead {
   listOrdersByCustomer(
     customerId: string,
     pagination: IPagination,
+    storeId?: string,
   ): Promise<IPaginatedResult<IOrder>>;
-  listActiveOrders(): Promise<IOrder[]>;
+  listActiveOrders(storeId: string): Promise<IOrder[]>;
   searchOrders(params: IParamsSearchOrders): Promise<IPaginatedResult<IOrder>>;
   listOrdersAwaitingPaymentSince(
     createdBefore: Date,

@@ -3,7 +3,7 @@ import { IController } from './controller.interface';
 import { ITokenService } from '../../../domain/auth/interfaces/token.service.interface';
 import { EOrderStatus } from '../../../domain/order/interfaces/order.interface';
 import { IOrderService } from '../../../domain/order/interfaces/order.service.interface';
-import { createAuthGuards } from '../middlewares/auth-guards';
+import { createAuthGuards, staffStoreId } from '../middlewares/auth-guards';
 import {
   toOrderResponse,
   toOrderSummaryResponse,
@@ -50,6 +50,7 @@ export class AdminOrderController implements IController {
       const page = Number(req.query.page ?? 1);
       const limit = Number(req.query.limit ?? DEFAULT_PAGE_SIZE);
       const { items, total } = await this.orderService.searchOrders({
+        storeId: staffStoreId(req),
         status: status as EOrderStatus | undefined,
         from: from ? new Date(String(from)) : undefined,
         to: to ? new Date(String(to)) : undefined,
@@ -69,12 +70,14 @@ export class AdminOrderController implements IController {
   };
 
   listActive = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const orders = await this.orderService.listActiveOrders();
+      const orders = await this.orderService.listActiveOrders(
+        staffStoreId(req),
+      );
       res.status(200).json(orders.map(toOrderResponse));
     } catch (error) {
       next(error);
@@ -87,7 +90,10 @@ export class AdminOrderController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const order = await this.orderService.getOrderById(req.params.id);
+      const order = await this.orderService.getOrderById(
+        staffStoreId(req),
+        req.params.id,
+      );
       res.status(200).json(toOrderResponse(order));
     } catch (error) {
       next(error);
@@ -101,6 +107,7 @@ export class AdminOrderController implements IController {
   ): Promise<void> => {
     try {
       const order = await this.orderService.changeOrderStatus({
+        storeId: staffStoreId(req),
         orderId: req.params.id,
         staffId: req.auth!.subjectId,
         status: req.body.status,
@@ -119,6 +126,7 @@ export class AdminOrderController implements IController {
   ): Promise<void> => {
     try {
       const order = await this.orderService.rejectOrder({
+        storeId: staffStoreId(req),
         orderId: req.params.id,
         staffId: req.auth!.subjectId,
         reason: req.body.reason,
@@ -136,6 +144,7 @@ export class AdminOrderController implements IController {
   ): Promise<void> => {
     try {
       const order = await this.orderService.cancelOrderByStaff({
+        storeId: staffStoreId(req),
         orderId: req.params.id,
         staffId: req.auth!.subjectId,
         reason: req.body.reason,

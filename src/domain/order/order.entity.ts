@@ -9,11 +9,14 @@ import {
   IOrderDeliveryZoneSnapshot,
   IOrderItem,
   IOrderStatusEntry,
+  IOrderStoreSnapshot,
 } from './interfaces/order.interface';
 import { FINAL_ORDER_STATUSES } from './order-status.transitions';
 
 export class Order implements IOrder {
   public readonly id: string;
+  public readonly storeId: string;
+  public readonly storeSnapshot: IOrderStoreSnapshot;
   public readonly number: number;
   public readonly customerId: string;
   public readonly customerSnapshot: IOrderCustomerSnapshot;
@@ -38,6 +41,8 @@ export class Order implements IOrder {
 
   constructor(props: IOrder) {
     this.id = props.id;
+    this.storeId = props.storeId;
+    this.storeSnapshot = props.storeSnapshot;
     this.number = props.number;
     this.customerId = props.customerId;
     this.customerSnapshot = props.customerSnapshot;
