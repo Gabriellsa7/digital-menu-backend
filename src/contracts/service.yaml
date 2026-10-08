@@ -1778,6 +1778,27 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /public/stores/{slug}/home:
+    parameters:
+      - $ref: '#/components/parameters/StoreSlug'
+    get:
+      tags:
+        - Menu
+      summary: Get the home sections of a published store
+      operationId: getStoreHome
+      description: Featured products, promotions, best sellers of the last 7 days (empty below 3), new arrivals, public coupons, and categories with product counts (HOM-R01..R06).
+      responses:
+        '200':
+          description: The store home
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreHome'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
   /public/stores/{slug}/menu:
     parameters:
       - $ref: '#/components/parameters/StoreSlug'
@@ -3525,6 +3546,89 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OptionGroup'
+    PublicCoupon:
+      type: object
+      required:
+        - code
+        - type
+        - value
+        - minOrderInCents
+        - firstOrderOnly
+        - expiresAt
+      properties:
+        code:
+          type: string
+        type:
+          $ref: '#/components/schemas/CouponType'
+        value:
+          type: integer
+        maxDiscountInCents:
+          type: integer
+        minOrderInCents:
+          type: integer
+        firstOrderOnly:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+    StoreHome:
+      type: object
+      required:
+        - featured
+        - promotions
+        - bestSellers
+        - newArrivals
+        - publicCoupons
+        - categories
+      properties:
+        featured:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/MenuProduct'
+        promotions:
+          type: array
+          maxItems: 12
+          items:
+            $ref: '#/components/schemas/MenuProduct'
+        bestSellers:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            required:
+              - product
+              - soldCount
+            properties:
+              product:
+                $ref: '#/components/schemas/MenuProduct'
+              soldCount:
+                type: integer
+        newArrivals:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/MenuProduct'
+        publicCoupons:
+          type: array
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/PublicCoupon'
+        categories:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - name
+              - productCount
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              productCount:
+                type: integer
     MenuCategory:
       type: object
       required:
