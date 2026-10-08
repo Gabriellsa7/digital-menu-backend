@@ -69,6 +69,7 @@ export class Server {
         apiSpec: this.apiSpecLocation || '',
         validateApiSpec: true,
         validateResponses: true,
+        fileUploader: false,
       }),
     );
   }

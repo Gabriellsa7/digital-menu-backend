@@ -36,6 +36,7 @@ export interface IStore {
   timezone: string;
   openingHours: IOpeningHour[];
   manualStatus: EManualStatus;
+  manualStatusUntil?: Date;
   minimumOrderInCents: number;
   deliveryEnabled: boolean;
   pickupEnabled: boolean;

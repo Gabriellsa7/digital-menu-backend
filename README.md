@@ -36,12 +36,26 @@ yarn build
 yarn start
 ```
 
-5. Tests and linter:
+5. Fill the database with a demo store (catalog, delivery zones, coupons,
+   owner `owner@digitalmenu.dev` / `owner12345`, staff
+   `staff@digitalmenu.dev` / `staff12345` and a few orders). Running it again
+   does not duplicate data; `--reset` wipes the database first (blocked in
+   production unless `SEED_ALLOW_RESET=true`):
+
+```bash
+yarn seed
+yarn seed --reset
+```
+
+6. Tests and linter:
 
 ```bash
 yarn test
 yarn lint
 ```
+
+Real-time events and scheduled jobs are described in
+[docs/realtime.md](docs/realtime.md).
 
 ## Adding New Features
 

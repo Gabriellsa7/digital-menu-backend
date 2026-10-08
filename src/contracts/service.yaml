@@ -23,6 +23,24 @@ tags:
     description: Customer login with Google or SMS code, session refresh and logout
   - name: Customer
     description: Logged-in customer profile and addresses
+  - name: Staff auth
+    description: Store team login with e-mail and password, session refresh and logout
+  - name: Staff users
+    description: Store team profile and management (owner only)
+  - name: Store
+    description: Store settings, opening hours and open/closed status
+  - name: Delivery zones
+    description: Neighborhoods served by the store, with fee and ETA
+  - name: Catalog
+    description: Categories, option groups and products managed by the store team
+  - name: Menu
+    description: Public storefront menu
+  - name: Coupons
+    description: Discount coupons managed by the owner and validated by customers
+  - name: Customer orders
+    description: Checkout, order history and payments of the logged-in customer
+  - name: Admin orders
+    description: Order board and lifecycle for the store team
 
 paths:
   /auth/customer/otp/request:
@@ -373,6 +391,1821 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /auth/staff/login:
+    post:
+      tags:
+        - Staff auth
+      summary: Log in as a staff user
+      operationId: loginStaff
+      description: Checks the e-mail and password and starts a session. The refresh token is set as an httpOnly cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/staff/refresh:
+    post:
+      tags:
+        - Staff auth
+      summary: Refresh the staff session
+      operationId: refreshStaffSession
+      description: Rotates the refresh cookie and returns a new access token. Inactive users cannot refresh.
+      responses:
+        '200':
+          description: Session refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/staff/logout:
+    post:
+      tags:
+        - Staff auth
+      summary: Log out the staff user
+      operationId: logoutStaff
+      description: Revokes the current session and clears the session cookie.
+      responses:
+        '204':
+          description: Logged out
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/me:
+    get:
+      tags:
+        - Staff users
+      summary: Get the logged-in staff user
+      operationId: getStaffProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The staff user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/me/password:
+    patch:
+      tags:
+        - Staff users
+      summary: Change the own password
+      operationId: changeStaffPassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/staff-users:
+    get:
+      tags:
+        - Staff users
+      summary: List the team
+      operationId: listStaffUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Every staff user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Staff users
+      summary: Create a staff user
+      operationId: createStaffUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaffUserRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/staff-users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Staff users
+      summary: Update the name or role of a staff user
+      operationId: updateStaffUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStaffUserRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/staff-users/{id}/active:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags:
+        - Staff users
+      summary: Activate or deactivate a staff user
+      operationId: setStaffUserActive
+      description: Deactivating revokes every session of the user (STF-R05).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActiveRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /public/store:
+    get:
+      tags:
+        - Store
+      summary: Get the store with its current status
+      operationId: getPublicStore
+      responses:
+        '200':
+          description: The store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/store:
+    get:
+      tags:
+        - Store
+      summary: Get the store settings
+      operationId: getAdminStore
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - Store
+      summary: Update the store settings (owner)
+      operationId: updateStore
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStoreRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/store/opening-hours:
+    put:
+      tags:
+        - Store
+      summary: Replace the whole opening schedule (owner)
+      operationId: setStoreOpeningHours
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetOpeningHoursRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/store/status:
+    patch:
+      tags:
+        - Store
+      summary: Force the store open or closed, or follow the schedule
+      operationId: setStoreStatus
+      description: A forced status goes back to AUTO at the next scheduled boundary (STO-R05).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetStoreStatusRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /public/delivery-zones:
+    get:
+      tags:
+        - Delivery zones
+      summary: List the active delivery zones
+      operationId: listPublicDeliveryZones
+      responses:
+        '200':
+          description: Active zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicDeliveryZone'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /public/delivery-zones/resolve:
+    get:
+      tags:
+        - Delivery zones
+      summary: Find the zone that serves a neighborhood
+      operationId: resolveDeliveryZone
+      description: Matching ignores accents, casing and extra spaces (CUS-R03).
+      parameters:
+        - name: neighborhood
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 80
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 80
+      responses:
+        '200':
+          description: The matched zone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicDeliveryZone'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/delivery-zones:
+    get:
+      tags:
+        - Delivery zones
+      summary: List every delivery zone
+      operationId: listDeliveryZones
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Every zone
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryZone'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Delivery zones
+      summary: Create a delivery zone (owner)
+      operationId: createDeliveryZone
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryZoneRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryZone'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/delivery-zones/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Delivery zones
+      summary: Update a delivery zone (owner)
+      operationId: updateDeliveryZone
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryZoneRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryZone'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Delivery zones
+      summary: Delete a delivery zone (owner)
+      operationId: deleteDeliveryZone
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/categories:
+    get:
+      tags:
+        - Catalog
+      summary: List every category in display order
+      operationId: listCategories
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Categories, including inactive ones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Catalog
+      summary: Create a category at the end of the list
+      operationId: createCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/categories/order:
+    put:
+      tags:
+        - Catalog
+      summary: Reorder the categories
+      operationId: reorderCategories
+      description: Receives every category id in the new order; positions become 0..n (CAT-R03).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderRequest'
+      responses:
+        '200':
+          description: Categories in the new order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/categories/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Catalog
+      summary: Rename or toggle a category
+      operationId: updateCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Catalog
+      summary: Delete an empty category
+      operationId: deleteCategory
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/option-groups:
+    get:
+      tags:
+        - Catalog
+      summary: List the option groups
+      operationId: listOptionGroups
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Option groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OptionGroup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Catalog
+      summary: Create an option group with its options
+      operationId: createOptionGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OptionGroupRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/option-groups/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+        - Catalog
+      summary: Get an option group
+      operationId: getOptionGroup
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The option group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - Catalog
+      summary: Replace an option group
+      operationId: updateOptionGroup
+      description: Options sent with an existing `id` keep it; options without one are created.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OptionGroupRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Catalog
+      summary: Delete an option group not linked to products
+      operationId: deleteOptionGroup
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/option-groups/{id}/options/{optionId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: optionId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      tags:
+        - Catalog
+      summary: Mark an option as available or sold out
+      operationId: setOptionAvailability
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityRequest'
+      responses:
+        '200':
+          description: The option group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/products:
+    get:
+      tags:
+        - Catalog
+      summary: List products with filters and pagination
+      operationId: listProducts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 60
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Catalog
+      summary: Create a product at the end of its category
+      operationId: createProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/products/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+        - Catalog
+      summary: Get a product
+      operationId: getProduct
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - Catalog
+      summary: Replace a product
+      operationId: updateProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Catalog
+      summary: Delete a product
+      operationId: deleteProduct
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/products/{id}/availability:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags:
+        - Catalog
+      summary: Mark a product as available or sold out
+      operationId: setProductAvailability
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/categories/{id}/products/order:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Catalog
+      summary: Reorder the products of a category
+      operationId: reorderProducts
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderRequest'
+      responses:
+        '200':
+          description: Products in the new order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/products/{id}/image:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags:
+        - Catalog
+      summary: Upload or replace the product image
+      operationId: setProductImage
+      description: JPEG, PNG or WebP up to 3 MB (PRD-R04). The previous image is deleted (PRD-R03).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageUploadRequest'
+      responses:
+        '200':
+          description: The product with the new image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Catalog
+      summary: Remove the product image
+      operationId: removeProductImage
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The product without image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/store/images/{kind}:
+    parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            - logo
+            - banner
+    post:
+      tags:
+        - Store
+      summary: Upload the store logo or banner (owner)
+      operationId: setStoreImage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageUploadRequest'
+      responses:
+        '200':
+          description: The store with the new image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /public/menu:
+    get:
+      tags:
+        - Menu
+      summary: Get the whole menu in display order
+      operationId: getMenu
+      description: Active categories with their active products and inlined option groups. Sold-out products are listed with `isAvailable=false` (PRD-R05).
+      responses:
+        '200':
+          description: The menu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Menu'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /public/products/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+        - Menu
+      summary: Get one menu product with its option groups
+      operationId: getMenuProduct
+      responses:
+        '200':
+          description: The product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuProduct'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/coupons:
+    get:
+      tags:
+        - Coupons
+      summary: List coupons (owner)
+      operationId: listCoupons
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Coupons, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Coupon'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Coupons
+      summary: Create a coupon (owner)
+      operationId: createCoupon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/coupons/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Coupons
+      summary: Replace a coupon (owner)
+      operationId: updateCoupon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/coupons/{id}/active:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags:
+        - Coupons
+      summary: Activate or deactivate a coupon (owner)
+      operationId: setCouponActive
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActiveRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/coupons/validate:
+    post:
+      tags:
+        - Coupons
+      summary: Preview the discount of a coupon
+      operationId: validateCoupon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponValidationRequest'
+      responses:
+        '200':
+          description: The coupon applies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders/quote:
+    post:
+      tags:
+        - Customer orders
+      summary: Price a cart without creating an order
+      operationId: quoteOrder
+      description: Runs every checkout rule (ORD-R01..R10). Prices sent by the client are ignored.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: Priced breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderQuote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders:
+    get:
+      tags:
+        - Customer orders
+      summary: List the own orders, newest first
+      operationId: listCustomerOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Customer orders
+      summary: Place an order
+      operationId: createOrder
+      description: Repeating the same `Idempotency-Key` returns the order created the first time (ORD-R11).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders/{orderId}/payment/card:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags:
+        - Customer orders
+      summary: Pay an order with a card (simulated)
+      operationId: payOrderWithCard
+      description: '4242 4242 4242 4242 is approved, 4000 0000 0000 0002 is declined and any other number is invalid. After 3 failures the order is canceled (PAY-R03, R05). Only brand and last 4 digits are stored.'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardPaymentRequest'
+      responses:
+        '200':
+          description: Approved; the order is placed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders/{orderId}/payment/pix/simulate:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags:
+        - Customer orders
+      summary: Approve the Pix payment (demo)
+      operationId: simulatePixPayment
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Approved; the order is placed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags:
+        - Customer orders
+      summary: Get an own order with its history and payment
+      operationId: getCustomerOrder
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /me/orders/{orderId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags:
+        - Customer orders
+      summary: Cancel an own order
+      operationId: cancelCustomerOrder
+      description: Allowed while AWAITING_PAYMENT or PLACED (ORD-R15). Approved payments are refunded (ORD-R16).
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+      responses:
+        '200':
+          description: The canceled order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/orders:
+    get:
+      tags:
+        - Admin orders
+      summary: Search orders
+      operationId: searchOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: search
+          in: query
+          description: Order number or customer name
+          schema:
+            type: string
+            maxLength: 60
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/orders/active:
+    get:
+      tags:
+        - Admin orders
+      summary: Orders on the board (placed to out for delivery)
+      operationId: listActiveOrders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active orders, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/orders/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+        - Admin orders
+      summary: Get an order
+      operationId: getAdminOrder
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/orders/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags:
+        - Admin orders
+      summary: Move an order forward
+      operationId: changeOrderStatus
+      description: Accepting (PREPARING) sets `estimatedReadyAt` (ORD-R13).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeOrderStatusRequest'
+      responses:
+        '200':
+          description: The updated order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/orders/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags:
+        - Admin orders
+      summary: Reject a placed order
+      operationId: rejectOrder
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequiredReasonRequest'
+      responses:
+        '200':
+          description: The rejected order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/orders/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags:
+        - Admin orders
+      summary: Cancel an order in preparation or ready
+      operationId: cancelOrderByStaff
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequiredReasonRequest'
+      responses:
+        '200':
+          description: The canceled order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -388,6 +2221,38 @@ components:
       schema:
         type: string
       description: The ID of the address
+
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the resource
+
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the order
 
   responses:
     BadRequest:
@@ -662,6 +2527,1255 @@ components:
           description: Present only when the address is served (CUS-R03)
         isDefault:
           type: boolean
+    StaffLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    StaffAuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/AccessTokenResponse'
+        - type: object
+          required:
+            - staffUser
+          properties:
+            staffUser:
+              $ref: '#/components/schemas/StaffUser'
+    StaffUser:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - role
+        - isActive
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+            - OWNER
+            - STAFF
+        isActive:
+          type: boolean
+        lastLoginAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    Password:
+      type: string
+      minLength: 8
+      maxLength: 128
+      pattern: '^(?=.*[A-Za-z])(?=.*\d).+$'
+      description: At least 8 characters with 1 letter and 1 number (STF-R02)
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          $ref: '#/components/schemas/Password'
+    CreateStaffUserRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - email
+        - password
+        - role
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        password:
+          $ref: '#/components/schemas/Password'
+        role:
+          type: string
+          enum:
+            - OWNER
+            - STAFF
+    UpdateStaffUserRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        role:
+          type: string
+          enum:
+            - OWNER
+            - STAFF
+    SetActiveRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - isActive
+      properties:
+        isActive:
+          type: boolean
+    ManualStatus:
+      type: string
+      enum:
+        - AUTO
+        - FORCED_OPEN
+        - FORCED_CLOSED
+    OpeningHour:
+      type: object
+      additionalProperties: false
+      required:
+        - weekday
+        - opensAt
+        - closesAt
+      properties:
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: 0 = Sunday
+        opensAt:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '18:00'
+        closesAt:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          description: May be earlier than opensAt when the interval crosses midnight
+          example: '02:00'
+    StoreAddress:
+      type: object
+      additionalProperties: false
+      required:
+        - zipCode
+        - street
+        - number
+        - neighborhood
+        - city
+        - state
+      properties:
+        zipCode:
+          type: string
+        street:
+          type: string
+        number:
+          type: string
+        complement:
+          type: string
+        neighborhood:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        reference:
+          type: string
+    StoreStatus:
+      type: object
+      required:
+        - isOpenNow
+        - manualStatus
+      properties:
+        isOpenNow:
+          type: boolean
+        manualStatus:
+          $ref: '#/components/schemas/ManualStatus'
+        closesAt:
+          type: string
+          format: date-time
+        nextOpeningAt:
+          type: string
+          format: date-time
+    Store:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - description
+        - phone
+        - address
+        - timezone
+        - openingHours
+        - minimumOrderInCents
+        - deliveryEnabled
+        - pickupEnabled
+        - pickupEtaMinutes
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        phone:
+          type: string
+        logoUrl:
+          type: string
+        bannerUrl:
+          type: string
+        address:
+          $ref: '#/components/schemas/StoreAddress'
+        timezone:
+          type: string
+          example: America/Sao_Paulo
+        openingHours:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpeningHour'
+        minimumOrderInCents:
+          type: integer
+        deliveryEnabled:
+          type: boolean
+        pickupEnabled:
+          type: boolean
+        pickupEtaMinutes:
+          type: integer
+        status:
+          $ref: '#/components/schemas/StoreStatus'
+    UpdateStoreRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+          maxLength: 60
+        description:
+          type: string
+          maxLength: 500
+        phone:
+          type: string
+          maxLength: 20
+        address:
+          $ref: '#/components/schemas/StoreAddress'
+        timezone:
+          type: string
+          minLength: 1
+        minimumOrderInCents:
+          type: integer
+          minimum: 0
+        deliveryEnabled:
+          type: boolean
+        pickupEnabled:
+          type: boolean
+        pickupEtaMinutes:
+          type: integer
+          minimum: 1
+          maximum: 240
+    SetOpeningHoursRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - openingHours
+      properties:
+        openingHours:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/OpeningHour'
+    SetStoreStatusRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - manualStatus
+      properties:
+        manualStatus:
+          $ref: '#/components/schemas/ManualStatus'
+    PublicDeliveryZone:
+      type: object
+      required:
+        - id
+        - name
+        - city
+        - feeInCents
+        - etaMinMinutes
+        - etaMaxMinutes
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Vila Mariana
+        city:
+          type: string
+          example: São Paulo
+        feeInCents:
+          type: integer
+          example: 590
+        etaMinMinutes:
+          type: integer
+          example: 30
+        etaMaxMinutes:
+          type: integer
+          example: 45
+    DeliveryZone:
+      allOf:
+        - $ref: '#/components/schemas/PublicDeliveryZone'
+        - type: object
+          required:
+            - isActive
+            - createdAt
+          properties:
+            isActive:
+              type: boolean
+            createdAt:
+              type: string
+              format: date-time
+    DeliveryZoneRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - city
+        - feeInCents
+        - etaMinMinutes
+        - etaMaxMinutes
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        feeInCents:
+          type: integer
+          minimum: 0
+        etaMinMinutes:
+          type: integer
+          minimum: 1
+          maximum: 240
+        etaMaxMinutes:
+          type: integer
+          minimum: 1
+          maximum: 240
+        isActive:
+          type: boolean
+    Category:
+      type: object
+      required:
+        - id
+        - name
+        - position
+        - isActive
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Burgers
+        position:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    CreateCategoryRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        isActive:
+          type: boolean
+    UpdateCategoryRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        isActive:
+          type: boolean
+    ReorderRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - ids
+      properties:
+        ids:
+          type: array
+          maxItems: 500
+          items:
+            type: string
+    Option:
+      type: object
+      required:
+        - id
+        - name
+        - priceInCents
+        - isAvailable
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Bacon
+        priceInCents:
+          type: integer
+          example: 400
+        isAvailable:
+          type: boolean
+    OptionGroup:
+      type: object
+      required:
+        - id
+        - name
+        - minSelections
+        - maxSelections
+        - allowRepeat
+        - options
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Adicionais
+        minSelections:
+          type: integer
+          description: 0 = optional
+        maxSelections:
+          type: integer
+          description: 1 = pick one
+        allowRepeat:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/Option'
+    OptionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - priceInCents
+      properties:
+        id:
+          type: string
+          description: Keep the id of an existing option
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        priceInCents:
+          type: integer
+          minimum: 0
+        isAvailable:
+          type: boolean
+    OptionGroupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - minSelections
+        - maxSelections
+        - allowRepeat
+        - options
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        minSelections:
+          type: integer
+          minimum: 0
+          maximum: 50
+        maxSelections:
+          type: integer
+          minimum: 1
+          maximum: 50
+        allowRepeat:
+          type: boolean
+        options:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/OptionRequest'
+    AvailabilityRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - isAvailable
+      properties:
+        isAvailable:
+          type: boolean
+    Product:
+      type: object
+      required:
+        - id
+        - categoryId
+        - name
+        - description
+        - priceInCents
+        - optionGroupIds
+        - isAvailable
+        - isActive
+        - position
+        - createdAt
+      properties:
+        id:
+          type: string
+        categoryId:
+          type: string
+        name:
+          type: string
+          example: Smash burger
+        description:
+          type: string
+        priceInCents:
+          type: integer
+          example: 3290
+        imageUrl:
+          type: string
+        optionGroupIds:
+          type: array
+          items:
+            type: string
+        isAvailable:
+          type: boolean
+          description: False = sold out
+        isActive:
+          type: boolean
+          description: False = hidden from the menu
+        position:
+          type: integer
+        servesPeople:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    ProductList:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - limit
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+    ProductRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - categoryId
+        - name
+        - priceInCents
+      properties:
+        categoryId:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 500
+        priceInCents:
+          type: integer
+          minimum: 0
+        optionGroupIds:
+          type: array
+          uniqueItems: true
+          maxItems: 20
+          items:
+            type: string
+        isAvailable:
+          type: boolean
+        isActive:
+          type: boolean
+        servesPeople:
+          type: integer
+          minimum: 1
+          maximum: 20
+    ImageUploadRequest:
+      type: object
+      properties:
+        image:
+          type: string
+          format: binary
+          description: JPEG, PNG or WebP, at most 3 MB
+    MenuProduct:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - priceInCents
+        - fromPriceInCents
+        - isAvailable
+        - optionGroups
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        priceInCents:
+          type: integer
+        fromPriceInCents:
+          type: integer
+          description: Base price plus the cheapest required options ("a partir de")
+        imageUrl:
+          type: string
+        isAvailable:
+          type: boolean
+        servesPeople:
+          type: integer
+        optionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroup'
+    MenuCategory:
+      type: object
+      required:
+        - id
+        - name
+        - products
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuProduct'
+    Menu:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuCategory'
+    CouponType:
+      type: string
+      enum:
+        - PERCENTAGE
+        - FIXED
+        - FREE_DELIVERY
+    FulfillmentType:
+      type: string
+      enum:
+        - DELIVERY
+        - PICKUP
+    Coupon:
+      type: object
+      required:
+        - id
+        - code
+        - type
+        - value
+        - minOrderInCents
+        - startsAt
+        - expiresAt
+        - usagePerCustomer
+        - usedCount
+        - firstOrderOnly
+        - isActive
+        - createdAt
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        type:
+          $ref: '#/components/schemas/CouponType'
+        value:
+          type: integer
+          description: Percent (1-100) or cents
+        maxDiscountInCents:
+          type: integer
+        minOrderInCents:
+          type: integer
+        startsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        usageLimit:
+          type: integer
+        usagePerCustomer:
+          type: integer
+        usedCount:
+          type: integer
+        firstOrderOnly:
+          type: boolean
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    CouponRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - type
+        - value
+        - startsAt
+        - expiresAt
+      properties:
+        code:
+          type: string
+          pattern: '^[A-Za-z0-9]{4,20}$'
+        type:
+          $ref: '#/components/schemas/CouponType'
+        value:
+          type: integer
+          minimum: 0
+        maxDiscountInCents:
+          type: integer
+          minimum: 1
+        minOrderInCents:
+          type: integer
+          minimum: 0
+        startsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        usageLimit:
+          type: integer
+          minimum: 1
+        usagePerCustomer:
+          type: integer
+          minimum: 1
+          maximum: 100
+        firstOrderOnly:
+          type: boolean
+        isActive:
+          type: boolean
+    CouponValidationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - subtotalInCents
+        - fulfillmentType
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+        subtotalInCents:
+          type: integer
+          minimum: 0
+        deliveryFeeInCents:
+          type: integer
+          minimum: 0
+        fulfillmentType:
+          $ref: '#/components/schemas/FulfillmentType'
+    CouponValidationResponse:
+      type: object
+      required:
+        - code
+        - type
+        - value
+        - discountInCents
+      properties:
+        code:
+          type: string
+        type:
+          $ref: '#/components/schemas/CouponType'
+        value:
+          type: integer
+        discountInCents:
+          type: integer
+    PaymentMethod:
+      type: string
+      enum:
+        - PIX
+        - CARD_ONLINE
+        - CASH_ON_DELIVERY
+        - CARD_ON_DELIVERY
+    PaymentStatus:
+      type: string
+      enum:
+        - PENDING
+        - APPROVED
+        - DECLINED
+        - EXPIRED
+        - REFUNDED
+        - ON_DELIVERY
+    OrderStatus:
+      type: string
+      enum:
+        - AWAITING_PAYMENT
+        - PLACED
+        - PREPARING
+        - READY
+        - OUT_FOR_DELIVERY
+        - COMPLETED
+        - REJECTED
+        - CANCELED
+    CartItemRequest:
+      type: object
+      required:
+        - productId
+        - quantity
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+        options:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            required:
+              - groupId
+              - optionId
+            properties:
+              groupId:
+                type: string
+              optionId:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+                maximum: 50
+        notes:
+          type: string
+          maxLength: 140
+    QuoteRequest:
+      type: object
+      required:
+        - items
+        - fulfillmentType
+        - paymentMethod
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/CartItemRequest'
+        fulfillmentType:
+          $ref: '#/components/schemas/FulfillmentType'
+        addressId:
+          type: string
+        couponCode:
+          type: string
+          maxLength: 20
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        changeForInCents:
+          type: integer
+          minimum: 1
+    CreateOrderRequest:
+      allOf:
+        - $ref: '#/components/schemas/QuoteRequest'
+        - type: object
+          properties:
+            notes:
+              type: string
+              maxLength: 280
+    OrderItem:
+      type: object
+      required:
+        - productId
+        - name
+        - unitPriceInCents
+        - quantity
+        - options
+        - totalInCents
+      properties:
+        productId:
+          type: string
+        name:
+          type: string
+        imageUrl:
+          type: string
+        unitPriceInCents:
+          type: integer
+        quantity:
+          type: integer
+        options:
+          type: array
+          items:
+            type: object
+            required:
+              - groupId
+              - groupName
+              - optionId
+              - name
+              - priceInCents
+              - quantity
+            properties:
+              groupId:
+                type: string
+              groupName:
+                type: string
+              optionId:
+                type: string
+              name:
+                type: string
+              priceInCents:
+                type: integer
+              quantity:
+                type: integer
+        notes:
+          type: string
+        totalInCents:
+          type: integer
+    OrderTotals:
+      type: object
+      required:
+        - items
+        - fulfillmentType
+        - subtotalInCents
+        - deliveryFeeInCents
+        - discountInCents
+        - totalInCents
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        fulfillmentType:
+          $ref: '#/components/schemas/FulfillmentType'
+        deliveryAddress:
+          $ref: '#/components/schemas/StoreAddress'
+        deliveryZone:
+          type: object
+          required:
+            - id
+            - name
+            - feeInCents
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            feeInCents:
+              type: integer
+        subtotalInCents:
+          type: integer
+        deliveryFeeInCents:
+          type: integer
+        discountInCents:
+          type: integer
+        totalInCents:
+          type: integer
+        coupon:
+          type: object
+          required:
+            - id
+            - code
+            - type
+            - value
+          properties:
+            id:
+              type: string
+            code:
+              type: string
+            type:
+              $ref: '#/components/schemas/CouponType'
+            value:
+              type: integer
+    OrderQuote:
+      allOf:
+        - $ref: '#/components/schemas/OrderTotals'
+        - type: object
+          required:
+            - etaMinMinutes
+            - etaMaxMinutes
+          properties:
+            etaMinMinutes:
+              type: integer
+            etaMaxMinutes:
+              type: integer
+    Payment:
+      type: object
+      required:
+        - method
+        - status
+        - failedAttempts
+      properties:
+        method:
+          $ref: '#/components/schemas/PaymentMethod'
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        changeForInCents:
+          type: integer
+        pix:
+          type: object
+          required:
+            - copyPaste
+            - qrCodeBase64
+            - expiresAt
+          properties:
+            copyPaste:
+              type: string
+            qrCodeBase64:
+              type: string
+            expiresAt:
+              type: string
+              format: date-time
+        card:
+          type: object
+          required:
+            - brand
+            - last4
+          properties:
+            brand:
+              type: string
+            last4:
+              type: string
+        failedAttempts:
+          type: integer
+        transactionId:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+    Order:
+      allOf:
+        - $ref: '#/components/schemas/OrderTotals'
+        - type: object
+          required:
+            - id
+            - number
+            - customerId
+            - customerSnapshot
+            - payment
+            - status
+            - statusHistory
+            - createdAt
+          properties:
+            id:
+              type: string
+            number:
+              type: integer
+            customerId:
+              type: string
+            customerSnapshot:
+              type: object
+              required:
+                - name
+                - phone
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+            payment:
+              $ref: '#/components/schemas/Payment'
+            status:
+              $ref: '#/components/schemas/OrderStatus'
+            statusHistory:
+              type: array
+              items:
+                type: object
+                required:
+                  - status
+                  - at
+                  - by
+                properties:
+                  status:
+                    $ref: '#/components/schemas/OrderStatus'
+                  at:
+                    type: string
+                    format: date-time
+                  by:
+                    type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - CUSTOMER
+                          - STAFF
+                          - SYSTEM
+                      id:
+                        type: string
+                  reason:
+                    type: string
+            notes:
+              type: string
+            estimatedReadyAt:
+              type: string
+              format: date-time
+            cancelReason:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+    CardPaymentRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - number
+        - holder
+        - expiry
+        - cvv
+      properties:
+        number:
+          type: string
+          pattern: '^[0-9 ]{12,23}$'
+        holder:
+          type: string
+          minLength: 2
+          maxLength: 60
+        expiry:
+          type: string
+          pattern: '^(0[1-9]|1[0-2])/\d{2}$'
+          example: '12/30'
+        cvv:
+          type: string
+          pattern: '^\d{3,4}$'
+    OrderSummary:
+      type: object
+      required:
+        - id
+        - number
+        - status
+        - fulfillmentType
+        - totalInCents
+        - itemsCount
+        - paymentMethod
+        - paymentStatus
+        - customerName
+        - createdAt
+      properties:
+        id:
+          type: string
+        number:
+          type: integer
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        fulfillmentType:
+          $ref: '#/components/schemas/FulfillmentType'
+        totalInCents:
+          type: integer
+        itemsCount:
+          type: integer
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+        customerName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    OrderList:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - limit
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderSummary'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+    ReasonRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+    ChangeOrderStatusRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - PREPARING
+            - READY
+            - OUT_FOR_DELIVERY
+            - COMPLETED
+        estimatedMinutes:
+          type: integer
+          minimum: 1
+          maximum: 240
+    RequiredReasonRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
     Error:
       type: object
       required:

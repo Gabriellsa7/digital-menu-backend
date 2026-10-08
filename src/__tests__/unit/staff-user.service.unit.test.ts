@@ -11,6 +11,7 @@ import { ESubjectType } from '../../domain/auth/interfaces/auth-subject.interfac
 import { BusinessRuleError } from '../../domain/errors/business-rule.error';
 import { ConflictError } from '../../domain/errors/conflict.error';
 import { NotFoundError } from '../../domain/errors/not-found.error';
+import { UnauthorizedError } from '../../domain/errors/unauthorized.error';
 import { FixedClock } from '../helpers/fixed.clock';
 
 const clock = new FixedClock();
@@ -256,5 +257,66 @@ describe('When a staff user changes the password', () => {
         newPassword: 'newSecret9',
       }),
     ).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe('When we verify staff credentials', () => {
+  it('should return the user and touch lastLoginAt', async () => {
+    staffUserRepositoryRead.findStaffUserByEmailWithPassword.mockResolvedValue(
+      aStaffUser(),
+    );
+
+    const staffUser = await staffUserService.verifyStaffUserCredentials({
+      email: 'ZORO@menu.dev',
+      password: 'secret123',
+    });
+
+    expect(staffUser.lastLoginAt).toEqual(clock.now());
+    expect(
+      staffUserRepositoryRead.findStaffUserByEmailWithPassword,
+    ).toHaveBeenCalledWith('zoro@menu.dev');
+  });
+
+  it.each([
+    ['an unknown e-mail', null],
+    ['a wrong password', aStaffUser({ passwordHash: 'hash:other' })],
+  ])(
+    'should throw the same UnauthorizedError for %s (AUTH-R01)',
+    async (_case, staffUser) => {
+      staffUserRepositoryRead.findStaffUserByEmailWithPassword.mockResolvedValue(
+        staffUser,
+      );
+
+      await expect(
+        staffUserService.verifyStaffUserCredentials({
+          email: 'zoro@menu.dev',
+          password: 'secret123',
+        }),
+      ).rejects.toMatchObject({
+        message: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS',
+      });
+    },
+  );
+
+  it('should reject an inactive user (AUTH-R02)', async () => {
+    staffUserRepositoryRead.findStaffUserByEmailWithPassword.mockResolvedValue(
+      aStaffUser({ isActive: false }),
+    );
+
+    await expect(
+      staffUserService.verifyStaffUserCredentials({
+        email: 'zoro@menu.dev',
+        password: 'secret123',
+      }),
+    ).rejects.toThrow(UnauthorizedError);
+  });
+});
+
+describe('When we check whether an owner exists', () => {
+  it('should be true when there is an active owner', async () => {
+    staffUserRepositoryRead.countActiveOwners.mockResolvedValue(1);
+
+    await expect(staffUserService.hasOwner()).resolves.toBe(true);
   });
 });
