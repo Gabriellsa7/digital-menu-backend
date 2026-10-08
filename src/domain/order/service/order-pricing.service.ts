@@ -1,4 +1,5 @@
 import { ErrorHandler } from '../../common/decorators/error-handler.decorator';
+import { IPostalAddress } from '../../common/postal-address.interface';
 import { ICouponService } from '../../coupon/interfaces/coupon.service.interface';
 import { Customer } from '../../customer/customer.entity';
 import { ICustomerService } from '../../customer/interfaces/customer.service.interface';
@@ -78,6 +79,7 @@ export class OrderPricingService implements IOrderPricingService {
     const deliveryFeeInCents = deliveryZone?.feeInCents ?? 0;
     const couponDiscount = params.couponCode
       ? await this.couponService.validateCouponForCustomer({
+          storeId: params.storeId,
           code: params.couponCode,
           customerId: params.customerId,
           subtotalInCents,
@@ -138,6 +140,7 @@ export class OrderPricingService implements IOrderPricingService {
   }
 
   private async resolveDelivery({
+    storeId,
     customerId,
     fulfillmentType,
     addressId,
@@ -156,9 +159,7 @@ export class OrderPricingService implements IOrderPricingService {
     );
     const { id, label, deliveryZoneId, isDefault, ...deliveryAddress } =
       customer.findAddress(addressId);
-    const deliveryZone = deliveryZoneId
-      ? await this.findActiveZone(deliveryZoneId)
-      : undefined;
+    const deliveryZone = await this.findActiveZone(storeId, deliveryAddress);
     if (!deliveryZone) {
       throw new BusinessRuleError(
         'The store does not deliver to this address',
@@ -170,17 +171,17 @@ export class OrderPricingService implements IOrderPricingService {
   }
 
   private async findActiveZone(
-    deliveryZoneId: string,
+    storeId: string,
+    { neighborhood, city }: Pick<IPostalAddress, 'neighborhood' | 'city'>,
   ): Promise<IDeliveryZone | undefined> {
-    const deliveryZone = await this.deliveryZoneService
-      .getDeliveryZoneById(deliveryZoneId)
+    return this.deliveryZoneService
+      .resolveDeliveryZone(storeId, neighborhood, city)
       .catch((error) => {
         if (error instanceof NotFoundError) {
           return undefined;
         }
         throw error;
       });
-    return deliveryZone?.isActive ? deliveryZone : undefined;
   }
 
   private async buildItems({

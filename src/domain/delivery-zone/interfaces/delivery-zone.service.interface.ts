@@ -5,6 +5,7 @@ import { IDeliveryZoneRepositoryWrite } from '../repository/delivery-zone.reposi
 import { IDeliveryZone } from './delivery-zone.interface';
 
 export interface IParamsDeliveryZoneData {
+  storeId: string;
   displayName: string;
   city: string;
   feeInCents: number;
@@ -14,7 +15,8 @@ export interface IParamsDeliveryZoneData {
 }
 
 export interface IParamsUpdateDeliveryZone
-  extends Partial<IParamsDeliveryZoneData> {
+  extends Partial<Omit<IParamsDeliveryZoneData, 'storeId'>> {
+  storeId: string;
   id: string;
 }
 
@@ -25,12 +27,16 @@ export interface IParamsDeliveryZoneService {
 }
 
 export interface IDeliveryZoneService extends IDeliveryZoneResolver {
-  listDeliveryZones(activeOnly: boolean): Promise<IDeliveryZone[]>;
-  getDeliveryZoneById(id: string): Promise<IDeliveryZone>;
+  listDeliveryZones(
+    storeId: string,
+    activeOnly: boolean,
+  ): Promise<IDeliveryZone[]>;
+  getDeliveryZoneById(storeId: string, id: string): Promise<IDeliveryZone>;
   createDeliveryZone(params: IParamsDeliveryZoneData): Promise<IDeliveryZone>;
   updateDeliveryZone(params: IParamsUpdateDeliveryZone): Promise<IDeliveryZone>;
-  deleteDeliveryZone(id: string): Promise<void>;
+  deleteDeliveryZone(storeId: string, id: string): Promise<void>;
   resolveDeliveryZone(
+    storeId: string,
     neighborhood: string,
     city: string,
   ): Promise<IDeliveryZone>;

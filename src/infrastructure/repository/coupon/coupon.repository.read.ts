@@ -11,16 +11,22 @@ export class CouponRepositoryRead implements ICouponRepositoryRead {
     return Mcoupon.findOne({ id }, HIDE_MONGO_INTERNAL_FIELDS).lean<ICoupon>();
   }
 
-  async findCouponByCode(code: string): Promise<ICoupon | null> {
+  async findCouponByCode(
+    storeId: string,
+    code: string,
+  ): Promise<ICoupon | null> {
     return Mcoupon.findOne(
-      { code },
+      { storeId, code },
       HIDE_MONGO_INTERNAL_FIELDS,
     ).lean<ICoupon>();
   }
 
-  async listCoupons({ isActive }: IParamsListCoupons): Promise<ICoupon[]> {
+  async listCoupons(
+    storeId: string,
+    { isActive }: IParamsListCoupons,
+  ): Promise<ICoupon[]> {
     return Mcoupon.find(
-      isActive === undefined ? {} : { isActive },
+      { storeId, ...(isActive !== undefined && { isActive }) },
       HIDE_MONGO_INTERNAL_FIELDS,
     )
       .sort({ createdAt: -1 })

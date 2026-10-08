@@ -107,13 +107,17 @@ async function seedCatalog(): Promise<void> {
 
 async function seedDeliveryZones(): Promise<void> {
   const deliveryZoneService = DeliveryZoneServiceFactory.create();
+  const { id: storeId } =
+    await StoreServiceFactory.create().ensureDefaultStore();
   for (const [displayName, feeInCents, etaMin, etaMax] of DELIVERY_ZONES_SEED) {
     const existing = await deliveryZoneService.resolveDeliveryZoneId(
+      storeId,
       displayName,
       DELIVERY_CITY_SEED,
     );
     if (!existing) {
       await deliveryZoneService.createDeliveryZone({
+        storeId,
         displayName,
         city: DELIVERY_CITY_SEED,
         feeInCents,
@@ -127,9 +131,15 @@ async function seedDeliveryZones(): Promise<void> {
 
 async function seedCoupons(): Promise<void> {
   const couponService = CouponServiceFactory.create();
+  const { id: storeId } =
+    await StoreServiceFactory.create().ensureDefaultStore();
   for (const coupon of couponsSeed(new Date())) {
-    if (!(await Mcoupon.exists({ code: coupon.code }))) {
-      await couponService.createCoupon(coupon);
+    if (!(await Mcoupon.exists({ storeId, code: coupon.code }))) {
+      await couponService.createCoupon({
+        ...coupon,
+        storeId,
+        isPublic: coupon.code === 'BEMVINDO10',
+      });
     }
   }
 }

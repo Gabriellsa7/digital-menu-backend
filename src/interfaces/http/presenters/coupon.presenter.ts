@@ -18,6 +18,7 @@ export interface ICouponResponse {
   usedCount: number;
   firstOrderOnly: boolean;
   isActive: boolean;
+  isPublic: boolean;
   createdAt: Date;
 }
 
@@ -38,6 +39,7 @@ export function toCouponResponse(coupon: ICoupon): ICouponResponse {
     usedCount: coupon.usedCount,
     firstOrderOnly: coupon.firstOrderOnly,
     isActive: coupon.isActive,
+    isPublic: coupon.isPublic,
     createdAt: coupon.createdAt,
   };
 }

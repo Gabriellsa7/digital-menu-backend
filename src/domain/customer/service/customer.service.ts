@@ -13,7 +13,6 @@ import {
   ICustomerService,
   IFoundOrCreatedCustomer,
   IParamsAddAddress,
-  IParamsAddressData,
   IParamsCustomerService,
   IParamsUpdateAddress,
   IParamsUpdateCustomerProfile,
@@ -182,9 +181,16 @@ export class CustomerService implements ICustomerService {
   }
 
   @ErrorHandler()
-  async listAddresses(customerId: string): Promise<IAddress[]> {
-    const customer = await this.getCustomerById(customerId);
-    return customer.addresses;
+  async listAddresses(
+    customerId: string,
+    storeId?: string,
+  ): Promise<IAddress[]> {
+    const { addresses } = await this.getCustomerById(customerId);
+    return storeId
+      ? Promise.all(
+          addresses.map((address) => this.withDeliveryZone(storeId, address)),
+        )
+      : addresses;
   }
 
   @ErrorHandler()
@@ -195,7 +201,7 @@ export class CustomerService implements ICustomerService {
     const customer = new Customer(await this.getCustomerById(customerId));
     const { isDefault, ...data } = address;
     const newAddress: IAddress = {
-      ...(await this.withDeliveryZone(data)),
+      ...data,
       id: randomUUID(),
       isDefault: Boolean(isDefault),
     };
@@ -213,10 +219,7 @@ export class CustomerService implements ICustomerService {
     address,
   }: IParamsUpdateAddress): Promise<IAddress> {
     const customer = new Customer(await this.getCustomerById(customerId));
-    const addresses = customer.withAddressReplaced(
-      addressId,
-      await this.withDeliveryZone(address),
-    );
+    const addresses = customer.withAddressReplaced(addressId, address);
 
     const updated = await this.updateCustomer(customerId, {
       set: { addresses },
@@ -307,10 +310,12 @@ export class CustomerService implements ICustomerService {
   }
 
   private async withDeliveryZone(
-    address: IParamsAddressData,
-  ): Promise<Omit<IAddress, 'id' | 'isDefault'>> {
+    storeId: string,
+    address: IAddress,
+  ): Promise<IAddress> {
     const deliveryZoneId =
       await this.deliveryZoneResolver.resolveDeliveryZoneId(
+        storeId,
         address.neighborhood,
         address.city,
       );

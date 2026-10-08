@@ -9,6 +9,8 @@ function createCoupon(usageLimit?: number) {
   const now = new Date();
   return couponRepositoryWrite.createCoupon({
     id: randomUUID(),
+    storeId: 'store-1',
+    isPublic: false,
     code: `C${randomUUID().slice(0, 8).toUpperCase()}`,
     type: ECouponType.FIXED,
     value: 500,

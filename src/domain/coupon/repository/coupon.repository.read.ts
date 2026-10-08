@@ -6,6 +6,9 @@ export interface IParamsListCoupons {
 
 export interface ICouponRepositoryRead {
   findCouponById(id: string): Promise<ICoupon | null>;
-  findCouponByCode(code: string): Promise<ICoupon | null>;
-  listCoupons(params: IParamsListCoupons): Promise<ICoupon[]>;
+  findCouponByCode(storeId: string, code: string): Promise<ICoupon | null>;
+  listCoupons(
+    storeId: string,
+    params: IParamsListCoupons,
+  ): Promise<ICoupon[]>;
 }

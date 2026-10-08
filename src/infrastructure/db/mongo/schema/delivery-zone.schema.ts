@@ -8,6 +8,7 @@ export interface IMDeliveryZone extends IDeliveryZone {
 export const deliveryZoneSchema = new mongoose.Schema<IMDeliveryZone>(
   {
     id: { type: String, required: true, unique: true },
+    storeId: { type: String, required: true },
     neighborhood: { type: String, required: true },
     displayName: { type: String, required: true },
     city: { type: String, required: true },
@@ -20,4 +21,7 @@ export const deliveryZoneSchema = new mongoose.Schema<IMDeliveryZone>(
   { timestamps: true },
 );
 
-deliveryZoneSchema.index({ neighborhood: 1, cityKey: 1 }, { unique: true });
+deliveryZoneSchema.index(
+  { storeId: 1, neighborhood: 1, cityKey: 1 },
+  { unique: true },
+);

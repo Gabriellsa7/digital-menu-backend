@@ -7,6 +7,7 @@ import { ECouponType, ICoupon } from './coupon.interface';
 import { ICustomerCouponUsage } from './customer-coupon-usage.interface';
 
 export interface IParamsCouponData {
+  storeId: string;
   code: string;
   type: ECouponType;
   value: number;
@@ -18,6 +19,7 @@ export interface IParamsCouponData {
   usagePerCustomer: number;
   firstOrderOnly: boolean;
   isActive: boolean;
+  isPublic: boolean;
 }
 
 export interface IParamsUpdateCoupon extends IParamsCouponData {
@@ -25,6 +27,7 @@ export interface IParamsUpdateCoupon extends IParamsCouponData {
 }
 
 export interface IParamsValidateCoupon {
+  storeId: string;
   code: string;
   customerId: string;
   subtotalInCents: number;
@@ -45,11 +48,15 @@ export interface IParamsCouponService {
 }
 
 export interface ICouponService {
-  listCoupons(isActive?: boolean): Promise<ICoupon[]>;
-  getCouponById(id: string): Promise<ICoupon>;
+  listCoupons(storeId: string, isActive?: boolean): Promise<ICoupon[]>;
+  getCouponById(storeId: string, id: string): Promise<ICoupon>;
   createCoupon(params: IParamsCouponData): Promise<ICoupon>;
   updateCoupon(params: IParamsUpdateCoupon): Promise<ICoupon>;
-  setCouponActive(id: string, isActive: boolean): Promise<ICoupon>;
+  setCouponActive(
+    storeId: string,
+    id: string,
+    isActive: boolean,
+  ): Promise<ICoupon>;
   validateCouponForCustomer(
     params: IParamsValidateCoupon,
   ): Promise<ICouponValidation>;

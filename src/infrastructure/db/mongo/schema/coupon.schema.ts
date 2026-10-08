@@ -11,7 +11,8 @@ export interface IMCoupon extends ICoupon {
 export const couponSchema = new mongoose.Schema<IMCoupon>(
   {
     id: { type: String, required: true, unique: true },
-    code: { type: String, required: true, unique: true, uppercase: true },
+    storeId: { type: String, required: true },
+    code: { type: String, required: true, uppercase: true },
     type: { type: String, enum: Object.values(ECouponType), required: true },
     value: { type: Number, required: true },
     maxDiscountInCents: { type: Number },
@@ -23,6 +24,9 @@ export const couponSchema = new mongoose.Schema<IMCoupon>(
     usedCount: { type: Number, required: true, default: 0 },
     firstOrderOnly: { type: Boolean, required: true },
     isActive: { type: Boolean, required: true },
+    isPublic: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
+
+couponSchema.index({ storeId: 1, code: 1 }, { unique: true });

@@ -5,6 +5,7 @@ const COUPON_CODE_PATTERN = /^[A-Z0-9]{4,20}$/;
 
 export class Coupon implements ICoupon {
   public readonly id: string;
+  public readonly storeId: string;
   public readonly code: string;
   public readonly type: ECouponType;
   public readonly value: number;
@@ -17,11 +18,13 @@ export class Coupon implements ICoupon {
   public readonly usedCount: number;
   public readonly firstOrderOnly: boolean;
   public readonly isActive: boolean;
+  public readonly isPublic: boolean;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
   constructor(props: ICoupon) {
     this.id = props.id;
+    this.storeId = props.storeId;
     this.code = Coupon.normalizeCode(props.code);
     this.type = props.type;
     this.value = props.value;
@@ -34,6 +37,7 @@ export class Coupon implements ICoupon {
     this.usedCount = props.usedCount;
     this.firstOrderOnly = props.firstOrderOnly;
     this.isActive = props.isActive;
+    this.isPublic = props.isPublic;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.assertInvariants();

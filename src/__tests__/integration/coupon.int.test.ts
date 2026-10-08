@@ -2,7 +2,7 @@ import { EStaffRole } from '../../domain/staff-user/interfaces/staff-user.interf
 import { Mcoupon } from '../../infrastructure/db/mongo/models/coupon.model';
 import { loginCustomerWithOtp } from '../helpers/customer-session.helper';
 import { as } from '../helpers/http.helper';
-import { loginAs } from '../helpers/staff-session.helper';
+import { createStore, loginAs } from '../helpers/staff-session.helper';
 
 const A_COUPON = {
   code: 'bemvindo10',
@@ -14,10 +14,13 @@ const A_COUPON = {
 };
 
 let ownerToken: string;
+let storeId: string;
 
 beforeEach(async () => {
   await Mcoupon.deleteMany({});
-  ({ accessToken: ownerToken } = await loginAs(EStaffRole.OWNER));
+  const owner = await loginAs(EStaffRole.OWNER);
+  ownerToken = owner.accessToken;
+  storeId = owner.staffUser.storeId;
 });
 
 describe('When the owner manages coupons', () => {
@@ -54,6 +57,26 @@ describe('When the owner manages coupons', () => {
     expect(statusCode).toBe(409);
   });
 
+  it('should let another store use the same code (CPN-R01)', async () => {
+    const otherStore = await createStore('Pizza Boa');
+    const { accessToken: otherOwner } = await loginAs(
+      EStaffRole.OWNER,
+      otherStore.id,
+    );
+    const mine = await as(ownerToken).post('/admin/coupons').send(A_COUPON);
+
+    const theirs = await as(otherOwner).post('/admin/coupons').send(A_COUPON);
+    const listed = await as(otherOwner).get('/admin/coupons');
+    const toggle = await as(otherOwner)
+      .patch(`/admin/coupons/${mine.body.id}/active`)
+      .send({ isActive: false });
+
+    expect(theirs.statusCode).toBe(201);
+    expect(listed.body.map(({ id }: { id: string }) => id)).toEqual([
+      theirs.body.id,
+    ]);
+    expect(toggle.statusCode).toBe(404);
+  });
 });
 
 describe('When a customer previews a coupon', () => {
@@ -62,6 +85,7 @@ describe('When a customer previews a coupon', () => {
     const { accessToken } = await loginCustomerWithOtp();
     const validate = (subtotalInCents: number) =>
       as(accessToken).post('/me/coupons/validate').send({
+        storeId,
         code: 'bemvindo10',
         subtotalInCents,
         fulfillmentType: 'DELIVERY',

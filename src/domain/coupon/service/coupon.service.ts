@@ -45,15 +45,15 @@ export class CouponService implements ICouponService {
   }
 
   @ErrorHandler()
-  async listCoupons(isActive?: boolean): Promise<ICoupon[]> {
-    return this.couponRepositoryRead.listCoupons({ isActive });
+  async listCoupons(storeId: string, isActive?: boolean): Promise<ICoupon[]> {
+    return this.couponRepositoryRead.listCoupons(storeId, { isActive });
   }
 
   @ErrorHandler()
-  async getCouponById(id: string): Promise<ICoupon> {
+  async getCouponById(storeId: string, id: string): Promise<ICoupon> {
     const coupon = await this.couponRepositoryRead.findCouponById(id);
 
-    return coupon ? coupon : this.throwCouponNotFound();
+    return coupon?.storeId === storeId ? coupon : this.throwCouponNotFound();
   }
 
   @ErrorHandler()
@@ -76,7 +76,7 @@ export class CouponService implements ICouponService {
     id,
     ...params
   }: IParamsUpdateCoupon): Promise<ICoupon> {
-    const current = await this.getCouponById(id);
+    const current = await this.getCouponById(params.storeId, id);
     const coupon = new Coupon({
       ...current,
       ...params,
@@ -97,6 +97,7 @@ export class CouponService implements ICouponService {
         usagePerCustomer: coupon.usagePerCustomer,
         firstOrderOnly: coupon.firstOrderOnly,
         isActive: coupon.isActive,
+        isPublic: coupon.isPublic,
         ...(maxDiscountInCents !== undefined && { maxDiscountInCents }),
         ...(usageLimit !== undefined && { usageLimit }),
       },
@@ -110,12 +111,18 @@ export class CouponService implements ICouponService {
   }
 
   @ErrorHandler()
-  async setCouponActive(id: string, isActive: boolean): Promise<ICoupon> {
+  async setCouponActive(
+    storeId: string,
+    id: string,
+    isActive: boolean,
+  ): Promise<ICoupon> {
+    await this.getCouponById(storeId, id);
     return this.updateCouponFields(id, { set: { isActive } });
   }
 
   @ErrorHandler()
   async validateCouponForCustomer({
+    storeId,
     code,
     customerId,
     subtotalInCents,
@@ -123,6 +130,7 @@ export class CouponService implements ICouponService {
     fulfillmentType,
   }: IParamsValidateCoupon): Promise<ICouponValidation> {
     const coupon = await this.couponRepositoryRead.findCouponByCode(
+      storeId,
       Coupon.normalizeCode(code),
     );
     if (!coupon) {
@@ -172,6 +180,7 @@ export class CouponService implements ICouponService {
 
   private async assertUniqueCode(coupon: ICoupon): Promise<void> {
     const existing = await this.couponRepositoryRead.findCouponByCode(
+      coupon.storeId,
       coupon.code,
     );
     if (existing && existing.id !== coupon.id) {
