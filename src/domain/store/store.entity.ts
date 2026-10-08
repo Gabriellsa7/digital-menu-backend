@@ -32,6 +32,8 @@ export class Store implements IStore {
   public readonly deliveryEnabled: boolean;
   public readonly pickupEnabled: boolean;
   public readonly pickupEtaMinutes: number;
+  public readonly isPublished: boolean;
+  public readonly isActive: boolean;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
@@ -54,6 +56,8 @@ export class Store implements IStore {
     this.deliveryEnabled = props.deliveryEnabled;
     this.pickupEnabled = props.pickupEnabled;
     this.pickupEtaMinutes = props.pickupEtaMinutes;
+    this.isPublished = props.isPublished;
+    this.isActive = props.isActive;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }
@@ -80,6 +84,8 @@ export class Store implements IStore {
       deliveryEnabled: true,
       pickupEnabled: true,
       pickupEtaMinutes: 20,
+      isPublished: false,
+      isActive: true,
       createdAt: now,
       updatedAt: now,
     });
