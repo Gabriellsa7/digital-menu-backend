@@ -23,9 +23,9 @@ describe('When anyone lists the store directory', () => {
     await createStore('Pizza Boa');
     await StoreServiceFactory.create().createStore({ name: 'Brasa Oculta' });
 
-    const all = await supertest(app.app).get('/public/stores');
+    const all = await supertest(app.app).get('/places');
     const search = await supertest(app.app)
-      .get('/public/stores')
+      .get('/places')
       .query({ search: 'brasa', limit: 1 });
 
     expect(all.body.items.map(({ slug }: { slug: string }) => slug)).toEqual([
@@ -46,7 +46,7 @@ describe('When anyone reads a public store by slug', () => {
     const store = await createStore('Casa Brasa');
 
     const { body, statusCode } = await supertest(app.app).get(
-      '/public/stores/casa-brasa',
+      '/places/slug/casa-brasa',
     );
 
     expect(statusCode).toBe(200);
@@ -62,7 +62,7 @@ describe('When anyone reads a public store by slug', () => {
     await StoreServiceFactory.create().createStore({ name: 'Hidden' });
 
     const { body, statusCode } = await supertest(app.app).get(
-      '/public/stores/hidden',
+      '/places/slug/hidden',
     );
 
     expect(statusCode).toBe(404);
@@ -78,12 +78,42 @@ describe('When anyone reads a public store by slug', () => {
       staffUser.storeId,
     );
 
-    const { body } = await supertest(app.app).get(
-      `/public/stores/${store.slug}`,
-    );
+    const { body } = await supertest(app.app).get(`/places/slug/${store.slug}`);
 
     expect(body.status.isOpenNow).toBe(true);
     expect(body.openingHours).toHaveLength(14);
+  });
+});
+
+describe('When the menu asks for the store info (menu meta)', () => {
+  it('should return the store and its active delivery zones', async () => {
+    const store = await createStore('Casa Brasa');
+    const { accessToken } = await loginAs(EStaffRole.OWNER, store.id);
+    await as(accessToken).post('/admin/delivery-zones').send({
+      name: 'Vila Mariana',
+      city: 'São Paulo',
+      feeInCents: 590,
+      etaMinMinutes: 30,
+      etaMaxMinutes: 45,
+    });
+
+    const { body, statusCode } = await supertest(app.app).get(
+      '/places/slug/casa-brasa/menu/meta',
+    );
+    const missing = await supertest(app.app).get(
+      '/places/slug/unknown-store/menu/meta',
+    );
+
+    expect(statusCode).toBe(200);
+    expect(body).toMatchObject({
+      place: {
+        id: store.id,
+        slug: 'casa-brasa',
+        status: { manualStatus: 'AUTO' },
+      },
+      deliveryZones: [{ name: 'Vila Mariana', feeInCents: 590 }],
+    });
+    expect(missing.body.code).toBe('STORE_NOT_FOUND');
   });
 });
 
@@ -99,7 +129,7 @@ describe('When two stores are managed at the same time (TEN-R03)', () => {
       .send({ minimumOrderInCents: 4000 });
     const { body: adminB } = await as(ownerB.accessToken).get('/admin/store');
     const { body: publicA } = await supertest(app.app).get(
-      '/public/stores/casa-brasa',
+      '/places/slug/casa-brasa',
     );
 
     expect(publicA.minimumOrderInCents).toBe(4000);
@@ -229,7 +259,7 @@ describe('When the owner publishes the store (TEN-R06)', () => {
     const published = await as(accessToken)
       .patch('/admin/store/publish')
       .send({ isPublished: true });
-    const publicRead = await supertest(app.app).get('/public/stores/nova-loja');
+    const publicRead = await supertest(app.app).get('/places/slug/nova-loja');
 
     expect(notReady.statusCode).toBe(422);
     expect(notReady.body).toMatchObject({

@@ -23,9 +23,9 @@ export class MenuController implements IController {
   }
 
   initRoutes() {
-    this.router.get('/public/stores/:slug/home', this.getHome);
-    this.router.get('/public/stores/:slug/menu', this.getMenu);
-    this.router.get('/public/stores/:slug/products/:id', this.getProduct);
+    this.router.get('/places/slug/:slug/home', this.getHome);
+    this.router.get('/places/slug/:slug/menu', this.getMenu);
+    this.router.get('/places/slug/:slug/products/:id', this.getProduct);
   }
 
   getHome = async (

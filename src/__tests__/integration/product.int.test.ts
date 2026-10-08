@@ -157,7 +157,7 @@ describe('When staff runs a promotion (PRM-R01..R03)', () => {
     const featured = await as(staffToken)
       .patch(`/admin/products/${smash.id}/featured`)
       .send({ isFeatured: true });
-    const menu = await supertest(app.app).get(`/public/stores/${slug}/menu`);
+    const menu = await supertest(app.app).get(`/places/slug/${slug}/menu`);
 
     expect(invalid.body.code).toBe('INVALID_PROMOTION_PRICE');
     expect(saved.body.promotion).toMatchObject({ priceInCents: 2400 });
