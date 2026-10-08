@@ -10,7 +10,12 @@ import {
   imageUpload,
   uploadedImage,
 } from '../middlewares/image-upload.middleware';
-import { toStoreResponse } from '../presenters/store.presenter';
+import {
+  toStoreResponse,
+  toStoreSummaryResponse,
+} from '../presenters/store.presenter';
+
+const DEFAULT_PAGE_SIZE = 20;
 
 export interface IParamsStoreController {
   storeService: IStoreService;
@@ -31,6 +36,7 @@ export class StoreController implements IController {
 
   initRoutes() {
     const { staff, owner } = createAuthGuards(this.tokenService);
+    this.router.get('/public/stores', this.listPublicStores);
     this.router.get('/public/stores/:slug', this.getPublicStore);
     this.router.get('/admin/store', ...staff, this.getStore);
     this.router.put('/admin/store', ...owner, this.updateStore);
@@ -48,6 +54,30 @@ export class StoreController implements IController {
       this.setImage,
     );
   }
+
+  listPublicStores = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const page = Number(req.query.page ?? 1);
+      const limit = Number(req.query.limit ?? DEFAULT_PAGE_SIZE);
+      const { items, total } = await this.storeService.listPublishedStores({
+        search: req.query.search as string | undefined,
+        limit,
+        offset: (page - 1) * limit,
+      });
+      res.status(200).json({
+        items: items.map(toStoreSummaryResponse),
+        total,
+        page,
+        limit,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   getPublicStore = async (
     req: Request<{ slug: string }>,

@@ -670,6 +670,32 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /public/stores:
+    get:
+      tags:
+        - Store
+      summary: List the published stores (directory)
+      operationId: listPublicStores
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+      responses:
+        '200':
+          description: A page of published stores, by name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
   /public/stores/{slug}:
     parameters:
       - $ref: '#/components/parameters/StoreSlug'
@@ -2899,6 +2925,45 @@ components:
           type: integer
         status:
           $ref: '#/components/schemas/StoreStatus'
+    StoreSummary:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - description
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+        status:
+          $ref: '#/components/schemas/StoreStatus'
+    StoreList:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - limit
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoreSummary'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
     UpdateStoreRequest:
       type: object
       additionalProperties: false

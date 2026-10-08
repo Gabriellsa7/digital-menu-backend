@@ -17,6 +17,30 @@ beforeEach(async () => {
   await Mstore.deleteMany({});
 });
 
+describe('When anyone lists the store directory', () => {
+  it('should list only published, active stores, filtered by name', async () => {
+    await createStore('Casa Brasa');
+    await createStore('Pizza Boa');
+    await StoreServiceFactory.create().createStore({ name: 'Brasa Oculta' });
+
+    const all = await supertest(app.app).get('/public/stores');
+    const search = await supertest(app.app)
+      .get('/public/stores')
+      .query({ search: 'brasa', limit: 1 });
+
+    expect(all.body.items.map(({ slug }: { slug: string }) => slug)).toEqual([
+      'casa-brasa',
+      'pizza-boa',
+    ]);
+    expect(search.body).toMatchObject({
+      total: 1,
+      page: 1,
+      limit: 1,
+      items: [{ slug: 'casa-brasa', status: { manualStatus: 'AUTO' } }],
+    });
+  });
+});
+
 describe('When anyone reads a public store by slug', () => {
   it('should answer the published store with its status', async () => {
     const store = await createStore('Casa Brasa');

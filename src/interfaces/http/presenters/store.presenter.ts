@@ -24,6 +24,17 @@ export interface IStoreResponse {
   status: IStoreStatus;
 }
 
+export function toStoreSummaryResponse({ store, status }: IStoreWithStatus) {
+  return {
+    id: store.id,
+    name: store.name,
+    slug: store.slug,
+    description: store.description,
+    ...(store.logoUrl && { logoUrl: store.logoUrl }),
+    status,
+  };
+}
+
 export function toStoreResponse({
   store,
   status,
