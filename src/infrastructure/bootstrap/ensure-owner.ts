@@ -4,6 +4,7 @@ import { IStaffUserService } from '../../domain/staff-user/interfaces/staff-user
 
 export interface IParamsEnsureOwner {
   staffUserService: IStaffUserService;
+  storeId: string;
   name: string;
   email?: string;
   password?: string;
@@ -11,11 +12,12 @@ export interface IParamsEnsureOwner {
 
 export async function ensureOwner({
   staffUserService,
+  storeId,
   name,
   email,
   password,
 }: IParamsEnsureOwner): Promise<void> {
-  if (await staffUserService.hasOwner()) {
+  if (await staffUserService.hasOwner(storeId)) {
     return;
   }
   if (!email || !password) {
@@ -25,6 +27,7 @@ export async function ensureOwner({
     return;
   }
   await staffUserService.createStaffUser({
+    storeId,
     name,
     email,
     password,

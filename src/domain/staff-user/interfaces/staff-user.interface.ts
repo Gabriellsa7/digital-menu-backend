@@ -5,6 +5,7 @@ export enum EStaffRole {
 
 export interface IStaffUser {
   id: string;
+  storeId: string;
   name: string;
   email: string;
   role: EStaffRole;

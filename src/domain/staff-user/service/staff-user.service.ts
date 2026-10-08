@@ -49,6 +49,7 @@ export class StaffUserService implements IStaffUserService {
 
   @ErrorHandler()
   async createStaffUser({
+    storeId,
     name,
     email,
     password,
@@ -68,6 +69,7 @@ export class StaffUserService implements IStaffUserService {
     const now = this.clock.now();
     const created = await this.staffUserRepositoryWrite.createStaffUser({
       id: randomUUID(),
+      storeId,
       name: name.trim(),
       email: normalizedEmail,
       passwordHash: await this.passwordHasher.hashPassword(password),
@@ -79,14 +81,15 @@ export class StaffUserService implements IStaffUserService {
     Logger.info('Staff user created', {
       eventName: 'staff_user.created',
       staffUserId: created.id,
+      storeId,
       role: created.role,
     });
     return created;
   }
 
   @ErrorHandler()
-  async listStaffUsers(): Promise<IStaffUser[]> {
-    return this.staffUserRepositoryRead.listStaffUsers();
+  async listStaffUsers(storeId: string): Promise<IStaffUser[]> {
+    return this.staffUserRepositoryRead.listStaffUsers(storeId);
   }
 
   @ErrorHandler()
@@ -97,14 +100,24 @@ export class StaffUserService implements IStaffUserService {
   }
 
   @ErrorHandler()
+  async getStaffUserInStore(storeId: string, id: string): Promise<IStaffUser> {
+    const staffUser = await this.staffUserRepositoryRead.findStaffUserById(id);
+
+    return staffUser?.storeId === storeId
+      ? staffUser
+      : this.throwStaffUserNotFound();
+  }
+
+  @ErrorHandler()
   async updateStaffUser({
+    storeId,
     id,
     name,
     role,
   }: IParamsUpdateStaffUser): Promise<IStaffUser> {
-    const staffUser = new StaffUser(await this.getStaffUserById(id));
+    const staffUser = new StaffUser(await this.getStaffUserInStore(storeId, id));
     if (role === EStaffRole.STAFF && staffUser.isActiveOwner()) {
-      await this.assertNotLastOwner();
+      await this.assertNotLastOwner(storeId);
     }
 
     return this.updateStaffUserFields(id, {
@@ -115,15 +128,16 @@ export class StaffUserService implements IStaffUserService {
 
   @ErrorHandler()
   async setStaffUserActive({
+    storeId,
     id,
     isActive,
   }: IParamsSetStaffUserActive): Promise<IStaffUser> {
-    const staffUser = new StaffUser(await this.getStaffUserById(id));
+    const staffUser = new StaffUser(await this.getStaffUserInStore(storeId, id));
     if (staffUser.isActive === isActive) {
       return staffUser;
     }
     if (!isActive && staffUser.isActiveOwner()) {
-      await this.assertNotLastOwner();
+      await this.assertNotLastOwner(storeId);
     }
 
     const updated = await this.updateStaffUserFields(id, { isActive });
@@ -193,12 +207,13 @@ export class StaffUserService implements IStaffUserService {
   }
 
   @ErrorHandler()
-  async hasOwner(): Promise<boolean> {
-    return (await this.staffUserRepositoryRead.countActiveOwners()) > 0;
+  async hasOwner(storeId: string): Promise<boolean> {
+    return (await this.staffUserRepositoryRead.countActiveOwners(storeId)) > 0;
   }
 
-  private async assertNotLastOwner(): Promise<void> {
-    const activeOwners = await this.staffUserRepositoryRead.countActiveOwners();
+  private async assertNotLastOwner(storeId: string): Promise<void> {
+    const activeOwners =
+      await this.staffUserRepositoryRead.countActiveOwners(storeId);
     if (activeOwners <= 1) {
       throw new BusinessRuleError(
         'The last active owner cannot be deactivated or demoted',

@@ -40,6 +40,7 @@ export class StaffAuthService implements IStaffAuthService {
         subjectId: staffUser.id,
         subjectType: ESubjectType.STAFF,
         role: staffUser.role,
+        storeId: staffUser.storeId,
       },
       userAgent,
     });
@@ -63,6 +64,7 @@ export class StaffAuthService implements IStaffAuthService {
         subjectId: staffUser.id,
         subjectType: ESubjectType.STAFF,
         role: staffUser.role,
+        storeId: staffUser.storeId,
       });
     return {
       accessToken,

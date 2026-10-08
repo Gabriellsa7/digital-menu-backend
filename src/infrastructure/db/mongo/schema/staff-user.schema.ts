@@ -17,6 +17,7 @@ export const HIDE_STAFF_USER_PRIVATE_FIELDS = {
 export const staffUserSchema = new mongoose.Schema<IMStaffUser>(
   {
     id: { type: String, required: true, unique: true },
+    storeId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     passwordHash: { type: String, required: true },

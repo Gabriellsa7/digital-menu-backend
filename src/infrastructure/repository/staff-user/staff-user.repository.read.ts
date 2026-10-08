@@ -35,14 +35,15 @@ export class StaffUserRepositoryRead implements IStaffUserRepositoryRead {
     ).lean<IStaffUserWithPassword>();
   }
 
-  async listStaffUsers(): Promise<IStaffUser[]> {
-    return MstaffUser.find({}, HIDE_STAFF_USER_PRIVATE_FIELDS)
+  async listStaffUsers(storeId: string): Promise<IStaffUser[]> {
+    return MstaffUser.find({ storeId }, HIDE_STAFF_USER_PRIVATE_FIELDS)
       .sort({ name: 1 })
       .lean<IStaffUser[]>();
   }
 
-  async countActiveOwners(): Promise<number> {
+  async countActiveOwners(storeId: string): Promise<number> {
     return MstaffUser.countDocuments({
+      storeId,
       role: EStaffRole.OWNER,
       isActive: true,
     });

@@ -3,7 +3,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { IController } from './controller.interface';
 import { ITokenService } from '../../../domain/auth/interfaces/token.service.interface';
 import { IStaffUserService } from '../../../domain/staff-user/interfaces/staff-user.service.interface';
-import { createAuthGuards } from '../middlewares/auth-guards';
+import { createAuthGuards, staffStoreId } from '../middlewares/auth-guards';
 import { toStaffUserResponse } from '../presenters/staff-user.presenter';
 
 type TIdParams = { id: string };
@@ -68,12 +68,14 @@ export class StaffUserController implements IController {
   };
 
   list = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const staffUsers = await this.staffUserService.listStaffUsers();
+      const staffUsers = await this.staffUserService.listStaffUsers(
+        staffStoreId(req),
+      );
       res.status(200).json(staffUsers.map(toStaffUserResponse));
     } catch (error) {
       next(error);
@@ -88,6 +90,7 @@ export class StaffUserController implements IController {
     try {
       const { name, email, password, role } = req.body;
       const staffUser = await this.staffUserService.createStaffUser({
+        storeId: staffStoreId(req),
         name,
         email,
         password,
@@ -106,6 +109,7 @@ export class StaffUserController implements IController {
   ): Promise<void> => {
     try {
       const staffUser = await this.staffUserService.updateStaffUser({
+        storeId: staffStoreId(req),
         id: req.params.id,
         name: req.body.name,
         role: req.body.role,
@@ -123,6 +127,7 @@ export class StaffUserController implements IController {
   ): Promise<void> => {
     try {
       const staffUser = await this.staffUserService.setStaffUserActive({
+        storeId: staffStoreId(req),
         id: req.params.id,
         isActive: req.body.isActive,
       });

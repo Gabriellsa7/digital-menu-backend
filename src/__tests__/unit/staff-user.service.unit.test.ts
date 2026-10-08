@@ -21,6 +21,7 @@ function aStaffUser(
 ): IStaffUserWithPassword {
   return {
     id: 'staff-1',
+    storeId: 'store-1',
     name: 'Zoro',
     email: 'zoro@menu.dev',
     passwordHash: 'hash:secret123',
@@ -79,6 +80,7 @@ beforeEach(() => {
 
 describe('When we create a staff user', () => {
   const NEW_USER = {
+    storeId: 'store-1',
     name: ' Sanji ',
     email: ' Sanji@Menu.DEV ',
     password: 'cook1234',
@@ -139,10 +141,29 @@ describe('When we update a staff user', () => {
 
     await expect(
       staffUserService.updateStaffUser({
+        storeId: 'store-1',
         id: 'staff-1',
         role: EStaffRole.STAFF,
       }),
     ).rejects.toMatchObject({ code: 'LAST_OWNER' });
+    expect(staffUserRepositoryRead.countActiveOwners).toHaveBeenCalledWith(
+      'store-1',
+    );
+  });
+
+  it('should treat a staff user of another store as not found (TEN-R04)', async () => {
+    staffUserRepositoryRead.findStaffUserById.mockResolvedValue(
+      aStaffUser({ storeId: 'store-2' }),
+    );
+
+    await expect(
+      staffUserService.updateStaffUser({
+        storeId: 'store-1',
+        id: 'staff-1',
+        name: 'Nami',
+      }),
+    ).rejects.toThrow(NotFoundError);
+    expect(staffUserRepositoryWrite.updateStaffUserById).not.toHaveBeenCalled();
   });
 
   it('should demote an owner when another active owner exists', async () => {
@@ -152,6 +173,7 @@ describe('When we update a staff user', () => {
     staffUserRepositoryRead.countActiveOwners.mockResolvedValue(2);
 
     const updated = await staffUserService.updateStaffUser({
+        storeId: 'store-1',
       id: 'staff-1',
       name: 'Nami',
       role: EStaffRole.STAFF,
@@ -169,7 +191,11 @@ describe('When we activate or deactivate a staff user', () => {
     staffUserRepositoryRead.countActiveOwners.mockResolvedValue(1);
 
     await expect(
-      staffUserService.setStaffUserActive({ id: 'staff-1', isActive: false }),
+      staffUserService.setStaffUserActive({
+        storeId: 'store-1',
+        id: 'staff-1',
+        isActive: false,
+      }),
     ).rejects.toBeInstanceOf(BusinessRuleError);
   });
 
@@ -177,6 +203,7 @@ describe('When we activate or deactivate a staff user', () => {
     staffUserRepositoryRead.findStaffUserById.mockResolvedValue(aStaffUser());
 
     const updated = await staffUserService.setStaffUserActive({
+      storeId: 'store-1',
       id: 'staff-1',
       isActive: false,
     });
@@ -192,6 +219,7 @@ describe('When we activate or deactivate a staff user', () => {
     staffUserRepositoryRead.findStaffUserById.mockResolvedValue(aStaffUser());
 
     await staffUserService.setStaffUserActive({
+      storeId: 'store-1',
       id: 'staff-1',
       isActive: true,
     });
@@ -317,6 +345,6 @@ describe('When we check whether an owner exists', () => {
   it('should be true when there is an active owner', async () => {
     staffUserRepositoryRead.countActiveOwners.mockResolvedValue(1);
 
-    await expect(staffUserService.hasOwner()).resolves.toBe(true);
+    await expect(staffUserService.hasOwner('store-1')).resolves.toBe(true);
   });
 });

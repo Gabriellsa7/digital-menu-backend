@@ -37,6 +37,7 @@ describe('When we use JWT access tokens', () => {
       sub: 'staff-1',
       typ: ESubjectType.STAFF,
       role: EStaffRole.OWNER,
+      storeId: 'store-1',
     });
 
     expect(expiresInSeconds).toBe(900);
@@ -44,6 +45,7 @@ describe('When we use JWT access tokens', () => {
       sub: 'staff-1',
       typ: ESubjectType.STAFF,
       role: EStaffRole.OWNER,
+      storeId: 'store-1',
     });
   });
 

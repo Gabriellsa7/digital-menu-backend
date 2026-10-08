@@ -54,6 +54,7 @@ describe('When a staff user logs in', () => {
   it('should answer 401 for an inactive user (AUTH-R02)', async () => {
     const staffUser = await createStaffUser();
     await StaffUserServiceFactory.create().setStaffUserActive({
+      storeId: staffUser.storeId,
       id: staffUser.id,
       isActive: false,
     });
@@ -94,6 +95,7 @@ describe('When a staff user refreshes the session', () => {
   it('should not refresh a deactivated user (STF-R05)', async () => {
     const { setCookie, staffUser } = await loginAs();
     await StaffUserServiceFactory.create().setStaffUserActive({
+      storeId: staffUser.storeId,
       id: staffUser.id,
       isActive: false,
     });
