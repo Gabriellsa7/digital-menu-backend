@@ -36,7 +36,11 @@ import {
   findAvailableSlug,
   slugify,
 } from '../policies/slug.policy';
-import { IStoreRepositoryRead } from '../repository/store.repository.read';
+import { IPaginatedResult } from '../../common/pagination.interface';
+import {
+  IParamsListPublishedStores,
+  IStoreRepositoryRead,
+} from '../repository/store.repository.read';
 import {
   IParamsUpdateStoreFields,
   IStoreRepositoryWrite,
@@ -133,6 +137,15 @@ export class StoreService implements IStoreService {
   @ErrorHandler()
   async listActiveStores(): Promise<IStore[]> {
     return this.storeRepositoryRead.listActiveStores();
+  }
+
+  @ErrorHandler()
+  async listPublishedStores(
+    params: IParamsListPublishedStores,
+  ): Promise<IPaginatedResult<IStoreWithStatus>> {
+    const { items, total } =
+      await this.storeRepositoryRead.listPublishedStores(params);
+    return { items: items.map((store) => this.withStatus(store)), total };
   }
 
   @ErrorHandler()

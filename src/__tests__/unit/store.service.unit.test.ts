@@ -54,6 +54,10 @@ beforeEach(() => {
     ),
     findFirstStore: jest.fn(async () => allStores()[0] ?? null),
     listActiveStores: jest.fn(async () => allStores()),
+    listPublishedStores: jest.fn(async (_params) => ({
+      items: allStores(),
+      total: allStores().length,
+    })),
   };
   storeRepositoryWrite = {
     createStore: jest.fn(async (store) => {
@@ -373,5 +377,20 @@ describe('When the owner publishes the store (TEN-R06)', () => {
     const { store } = await storeService.setPublished(STORE_ID, false);
 
     expect(store.isPublished).toBe(false);
+  });
+});
+
+describe('When anyone lists the store directory', () => {
+  it('should return each store with its status', async () => {
+    const { items, total } = await storeService.listPublishedStores({
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(total).toBe(1);
+    expect(items[0]).toMatchObject({
+      store: { id: STORE_ID },
+      status: { isOpenNow: false },
+    });
   });
 });

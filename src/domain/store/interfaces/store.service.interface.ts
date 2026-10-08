@@ -5,7 +5,11 @@ import {
   IStorageProvider,
 } from '../../common/storage.provider.interface';
 import { IStoreEventPublisher } from '../events/store.event.publisher';
-import { IStoreRepositoryRead } from '../repository/store.repository.read';
+import { IPaginatedResult } from '../../common/pagination.interface';
+import {
+  IParamsListPublishedStores,
+  IStoreRepositoryRead,
+} from '../repository/store.repository.read';
 import { IStoreRepositoryWrite } from '../repository/store.repository.write';
 import { IStoreReadiness } from './store-readiness.interface';
 import {
@@ -59,6 +63,9 @@ export interface IStoreService {
   getStoreWithStatus(storeId: string): Promise<IStoreWithStatus>;
   getPublishedStoreBySlug(slug: string): Promise<IStoreWithStatus>;
   listActiveStores(): Promise<IStore[]>;
+  listPublishedStores(
+    params: IParamsListPublishedStores,
+  ): Promise<IPaginatedResult<IStoreWithStatus>>;
   deleteStore(storeId: string): Promise<void>;
   setPublished(
     storeId: string,
