@@ -1,3 +1,6 @@
+import supertest from 'supertest';
+import { app } from '../../../jest/setup-integration-tests';
+import { StoreServiceFactory } from '../../infrastructure/config/factories/store.service.factory';
 import { as } from '../helpers/http.helper';
 import {
   clearCatalog,
@@ -135,9 +138,10 @@ describe('When staff deletes catalog items still in use', () => {
 });
 
 describe('When staff runs a promotion (PRM-R01..R03)', () => {
-  it('should validate and save the promotion and the featured flag', async () => {
+  it('should show the promotion in the menu and validate the price', async () => {
     const category = await createCategory('Burgers');
     const smash = await createProduct(category.id, { priceInCents: 3000 });
+    const { slug } = await StoreServiceFactory.create().getStore(smash.storeId);
     const now = Date.now();
     const period = {
       startsAt: new Date(now - 60_000).toISOString(),
@@ -153,9 +157,15 @@ describe('When staff runs a promotion (PRM-R01..R03)', () => {
     const featured = await as(staffToken)
       .patch(`/admin/products/${smash.id}/featured`)
       .send({ isFeatured: true });
+    const menu = await supertest(app.app).get(`/public/stores/${slug}/menu`);
 
     expect(invalid.body.code).toBe('INVALID_PROMOTION_PRICE');
     expect(saved.body.promotion).toMatchObject({ priceInCents: 2400 });
     expect(featured.body.isFeatured).toBe(true);
+    expect(menu.body.categories[0].products[0]).toMatchObject({
+      fromPriceInCents: 2400,
+      isNew: true,
+      promotion: { priceInCents: 2400, discountPercent: 20 },
+    });
   });
 });

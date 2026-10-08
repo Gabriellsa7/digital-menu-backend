@@ -3483,6 +3483,7 @@ components:
         - priceInCents
         - fromPriceInCents
         - isAvailable
+        - isNew
         - optionGroups
       properties:
         id:
@@ -3502,6 +3503,24 @@ components:
           type: boolean
         servesPeople:
           type: integer
+        promotion:
+          type: object
+          description: Only while the promotion is active (PRM-R02, R03)
+          required:
+            - priceInCents
+            - endsAt
+            - discountPercent
+          properties:
+            priceInCents:
+              type: integer
+            endsAt:
+              type: string
+              format: date-time
+            discountPercent:
+              type: integer
+        isNew:
+          type: boolean
+          description: Created in the last 14 days (HOM-R04)
         optionGroups:
           type: array
           items:
@@ -3788,6 +3807,9 @@ components:
           type: string
         imageUrl:
           type: string
+        listPriceInCents:
+          type: integer
+          description: Base price before an active promotion (PRM-R02)
         unitPriceInCents:
           type: integer
         quantity:

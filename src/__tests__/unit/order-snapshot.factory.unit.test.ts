@@ -20,13 +20,41 @@ const SMASH_WITH_BACON: ICartItem = {
 };
 
 function build(items: ICartItem[], products = [aProductFixture()]) {
-  return buildOrderItems(items, products, [
-    aBreadGroupFixture(),
-    anOptionGroupFixture(),
-  ]);
+  return buildOrderItems(
+    items,
+    products,
+    [aBreadGroupFixture(), anOptionGroupFixture()],
+    new Date('2026-10-01T12:00:00Z'),
+  );
 }
 
 describe('When we build the order item snapshots (ORD-R07)', () => {
+  it('should charge the active promotion and keep the list price (PRM-R02)', () => {
+    const [item] = build(
+      [
+        {
+          productId: 'smash',
+          quantity: 1,
+          options: [{ groupId: 'bread', optionId: 'brioche' }],
+        },
+      ],
+      [
+        aProductFixture({
+          promotion: {
+            priceInCents: 2500,
+            startsAt: new Date('2026-09-01T00:00:00Z'),
+            endsAt: new Date('2026-10-30T00:00:00Z'),
+          },
+        }),
+      ],
+    );
+
+    expect(item).toMatchObject({
+      listPriceInCents: 3000,
+      unitPriceInCents: 2500,
+    });
+  });
+
   it('should price the item from the catalog, not from the client', () => {
     const [item] = build([SMASH_WITH_BACON]);
 
@@ -59,7 +87,12 @@ describe('When a cart item is invalid', () => {
       [aProductFixture({ isActive: false })],
       'PRODUCT_UNAVAILABLE',
     ],
-    ['an unknown product (ORD-R05)', [SMASH_WITH_BACON], [], 'PRODUCT_UNAVAILABLE'],
+    [
+      'an unknown product (ORD-R05)',
+      [SMASH_WITH_BACON],
+      [],
+      'PRODUCT_UNAVAILABLE',
+    ],
     [
       'a missing required group (ORD-R06)',
       [{ productId: 'smash', quantity: 1, options: [] }],
@@ -134,8 +167,16 @@ describe('When we check the cart size (ORD-R08)', () => {
       Array.from({ length: 51 }, () => SMASH_WITH_BACON),
       'INVALID_CART_SIZE',
     ],
-    ['a quantity of 100', [{ ...SMASH_WITH_BACON, quantity: 100 }], 'INVALID_QUANTITY'],
-    ['a quantity of 0', [{ ...SMASH_WITH_BACON, quantity: 0 }], 'INVALID_QUANTITY'],
+    [
+      'a quantity of 100',
+      [{ ...SMASH_WITH_BACON, quantity: 100 }],
+      'INVALID_QUANTITY',
+    ],
+    [
+      'a quantity of 0',
+      [{ ...SMASH_WITH_BACON, quantity: 0 }],
+      'INVALID_QUANTITY',
+    ],
   ])('should reject %s', (_case, items, code) => {
     expect(() => assertCartSize(items)).toThrow(
       expect.objectContaining({ code }),

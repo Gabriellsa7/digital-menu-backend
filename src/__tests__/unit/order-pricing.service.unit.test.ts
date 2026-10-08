@@ -1,3 +1,4 @@
+import { FixedClock } from '../helpers/fixed.clock';
 import { OrderPricingService } from '../../domain/order/service/order-pricing.service';
 import { IParamsQuoteOrder } from '../../domain/order/interfaces/order-pricing.service.interface';
 import { EFulfillmentType } from '../../domain/order/interfaces/order.interface';
@@ -55,6 +56,7 @@ const orderPricingService = new OrderPricingService({
   productService: productService as unknown as IProductService,
   optionGroupService: optionGroupService as unknown as IOptionGroupService,
   couponService: couponService as unknown as ICouponService,
+  clock: new FixedClock('2026-10-01T12:00:00Z'),
 });
 
 beforeEach(() => {

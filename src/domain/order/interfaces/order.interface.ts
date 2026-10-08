@@ -49,6 +49,7 @@ export interface IOrderItem {
   productId: string;
   name: string;
   imageUrl?: string;
+  listPriceInCents?: number;
   unitPriceInCents: number;
   quantity: number;
   options: IOrderItemOption[];
