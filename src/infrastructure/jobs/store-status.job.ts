@@ -5,7 +5,7 @@ import { IJob } from './job.interface';
 
 export class StoreStatusJob implements IJob {
   public readonly name = 'store-status';
-  private lastStatus?: IStoreStatus;
+  private readonly lastStatuses = new Map<string, IStoreStatus>();
 
   constructor(
     private readonly storeService: IStoreService,
@@ -13,14 +13,18 @@ export class StoreStatusJob implements IJob {
   ) {}
 
   async run(): Promise<void> {
-    const status = await this.storeService.refreshStoreStatus();
-    const hasChanged =
-      this.lastStatus !== undefined &&
-      (this.lastStatus.isOpenNow !== status.isOpenNow ||
-        this.lastStatus.manualStatus !== status.manualStatus);
-    if (hasChanged) {
-      this.storeEventPublisher.publishStoreStatusChanged(status);
+    const stores = await this.storeService.listActiveStores();
+    for (const { id } of stores) {
+      const status = await this.storeService.refreshStoreStatus(id);
+      const lastStatus = this.lastStatuses.get(id);
+      const hasChanged =
+        lastStatus !== undefined &&
+        (lastStatus.isOpenNow !== status.isOpenNow ||
+          lastStatus.manualStatus !== status.manualStatus);
+      if (hasChanged) {
+        this.storeEventPublisher.publishStoreStatusChanged(status);
+      }
+      this.lastStatuses.set(id, status);
     }
-    this.lastStatus = status;
   }
 }

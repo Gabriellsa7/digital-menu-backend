@@ -185,6 +185,7 @@ export class CustomerOrderController implements IController {
   private cartData(req: Request): IParamsQuoteOrder {
     const { body } = req;
     return {
+      storeId: body.storeId,
       customerId: req.auth!.subjectId,
       items: (body.items as IParamsQuoteOrder['items']).map((item) => ({
         productId: item.productId,

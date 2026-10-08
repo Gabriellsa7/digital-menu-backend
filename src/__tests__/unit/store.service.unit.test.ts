@@ -12,12 +12,14 @@ import { InMemoryStorageProvider } from '../../infrastructure/storage/in-memory.
 import { FixedClock } from '../helpers/fixed.clock';
 
 const THURSDAY_NINE_AM = '2026-10-01T12:00:00.000Z';
+const STORE_ID = 'store-1';
 const OPENING_HOURS = [
   { weekday: EWeekday.THURSDAY, opensAt: '11:00', closesAt: '23:00' },
 ];
 
 let clock: FixedClock;
 let stored: IStore | null;
+let others: IStore[];
 let storeRepositoryRead: jest.Mocked<IStoreRepositoryRead>;
 let storeRepositoryWrite: jest.Mocked<IStoreRepositoryWrite>;
 let storageProvider: InMemoryStorageProvider;
@@ -25,20 +27,43 @@ let storeService: StoreService;
 
 function aStore(overrides: Partial<IStore> = {}): IStore {
   return {
-    ...Store.withDefaults('store-1', clock.now()),
+    ...Store.withDefaults(STORE_ID, clock.now(), {
+      name: 'Digital Menu',
+      slug: 'digital-menu',
+    }),
     openingHours: OPENING_HOURS,
     ...overrides,
   };
 }
 
+function allStores(): IStore[] {
+  return [...(stored ? [stored] : []), ...others];
+}
+
 beforeEach(() => {
   clock = new FixedClock(THURSDAY_NINE_AM);
   stored = aStore();
-  storeRepositoryRead = { findStore: jest.fn(async () => stored) };
+  others = [];
+  storeRepositoryRead = {
+    findStoreById: jest.fn(
+      async (id) => allStores().find((store) => store.id === id) ?? null,
+    ),
+    findStoreBySlug: jest.fn(
+      async (slug) => allStores().find((store) => store.slug === slug) ?? null,
+    ),
+    findFirstStore: jest.fn(async () => allStores()[0] ?? null),
+    listActiveStores: jest.fn(async () => allStores()),
+  };
   storeRepositoryWrite = {
-    createStoreIfMissing: jest.fn(async (store) => store),
-    updateStore: jest.fn(async ({ set = {}, unset = [] }) => {
-      const next = { ...stored!, ...set } as Record<string, unknown>;
+    createStore: jest.fn(async (store) => {
+      others.push(store);
+      return store;
+    }),
+    updateStore: jest.fn(async (id, { set = {}, unset = [] }) => {
+      if (id !== stored?.id) {
+        return null;
+      }
+      const next = { ...stored, ...set } as Record<string, unknown>;
       unset.forEach((field) => delete next[field]);
       stored = next as unknown as IStore;
       return stored;
@@ -58,23 +83,46 @@ beforeEach(() => {
   });
 });
 
-describe('When we read the store', () => {
-  it('should create it with defaults when it is missing (STO-R01)', async () => {
-    stored = null;
+describe('When we create a store (TEN-R01)', () => {
+  it('should derive the slug from the name and start unpublished', async () => {
+    const created = await storeService.createStore({ name: 'Casa Brasa' });
 
-    const store = await storeService.getStore();
-
-    expect(store).toMatchObject({
+    expect(created).toMatchObject({
+      slug: 'casa-brasa',
+      isPublished: false,
+      isActive: true,
       manualStatus: EManualStatus.AUTO,
       timezone: 'America/Sao_Paulo',
-      deliveryEnabled: true,
+      deliveryEnabled: false,
       pickupEnabled: true,
     });
-    expect(storeRepositoryWrite.createStoreIfMissing).toHaveBeenCalled();
+  });
+
+  it('should reuse the first store as the default store', async () => {
+    await expect(storeService.ensureDefaultStore()).resolves.toMatchObject({
+      id: STORE_ID,
+    });
+    expect(storeRepositoryWrite.createStore).not.toHaveBeenCalled();
+  });
+
+  it('should create a published default store when none exists', async () => {
+    stored = null;
+
+    const store = await storeService.ensureDefaultStore();
+
+    expect(store).toMatchObject({ slug: 'digital-menu', isPublished: true });
+  });
+});
+
+describe('When we read the store', () => {
+  it('should throw NotFoundError for an unknown store id', async () => {
+    await expect(storeService.getStore('missing')).rejects.toMatchObject({
+      status: 404,
+    });
   });
 
   it('should be closed before the opening with the next opening time', async () => {
-    const { status } = await storeService.getStoreWithStatus();
+    const { status } = await storeService.getStoreWithStatus(STORE_ID);
 
     expect(status).toEqual({
       isOpenNow: false,
@@ -86,7 +134,7 @@ describe('When we read the store', () => {
   it('should be open inside an interval with the closing time', async () => {
     clock.advanceSeconds(3 * 3600);
 
-    const { status } = await storeService.getStoreWithStatus();
+    const { status } = await storeService.getStoreWithStatus(STORE_ID);
 
     expect(status).toMatchObject({
       isOpenNow: true,
@@ -98,6 +146,7 @@ describe('When we read the store', () => {
 describe('When staff forces the store status (STO-R05)', () => {
   it('should open a closed store until the next boundary', async () => {
     const { status } = await storeService.setManualStatus(
+      STORE_ID,
       EManualStatus.FORCED_OPEN,
     );
 
@@ -108,10 +157,10 @@ describe('When staff forces the store status (STO-R05)', () => {
   });
 
   it('should go back to the schedule after the boundary', async () => {
-    await storeService.setManualStatus(EManualStatus.FORCED_CLOSED);
+    await storeService.setManualStatus(STORE_ID, EManualStatus.FORCED_CLOSED);
     clock.advanceSeconds(3 * 3600);
 
-    const { status } = await storeService.getStoreWithStatus();
+    const { status } = await storeService.getStoreWithStatus(STORE_ID);
 
     expect(status).toMatchObject({
       isOpenNow: true,
@@ -121,16 +170,16 @@ describe('When staff forces the store status (STO-R05)', () => {
 
   it('should keep the store closed while FORCED_CLOSED beats the schedule', async () => {
     clock.advanceSeconds(3 * 3600);
-    await storeService.setManualStatus(EManualStatus.FORCED_CLOSED);
+    await storeService.setManualStatus(STORE_ID, EManualStatus.FORCED_CLOSED);
 
-    await expect(storeService.assertAcceptingOrders()).rejects.toMatchObject({
+    await expect(storeService.assertAcceptingOrders(STORE_ID)).rejects.toMatchObject({
       code: 'STORE_CLOSED',
     });
   });
 
   it('should clear the expiry when going back to AUTO', async () => {
-    await storeService.setManualStatus(EManualStatus.FORCED_OPEN);
-    await storeService.setManualStatus(EManualStatus.AUTO);
+    await storeService.setManualStatus(STORE_ID, EManualStatus.FORCED_OPEN);
+    await storeService.setManualStatus(STORE_ID, EManualStatus.AUTO);
 
     expect(stored?.manualStatusUntil).toBeUndefined();
   });
@@ -138,7 +187,7 @@ describe('When staff forces the store status (STO-R05)', () => {
 
 describe('When we check whether the store accepts orders (ORD-R01)', () => {
   it('should throw STORE_CLOSED with the next opening time', async () => {
-    await expect(storeService.assertAcceptingOrders()).rejects.toMatchObject({
+    await expect(storeService.assertAcceptingOrders(STORE_ID)).rejects.toMatchObject({
       code: 'STORE_CLOSED',
       details: { nextOpeningAt: '2026-10-01T14:00:00.000Z' },
     });
@@ -147,7 +196,7 @@ describe('When we check whether the store accepts orders (ORD-R01)', () => {
   it('should return the store while open', async () => {
     clock.advanceSeconds(3 * 3600);
 
-    await expect(storeService.assertAcceptingOrders()).resolves.toMatchObject(
+    await expect(storeService.assertAcceptingOrders(STORE_ID)).resolves.toMatchObject(
       { id: 'store-1' },
     );
   });
@@ -155,7 +204,7 @@ describe('When we check whether the store accepts orders (ORD-R01)', () => {
 
 describe('When the owner updates the store', () => {
   it('should save only the sent fields', async () => {
-    const store = await storeService.updateStore({
+    const store = await storeService.updateStore(STORE_ID, {
       name: 'Burger House',
       minimumOrderInCents: 2000,
     });
@@ -171,19 +220,19 @@ describe('When the owner updates the store', () => {
     stored = aStore({ pickupEnabled: false });
 
     await expect(
-      storeService.updateStore({ deliveryEnabled: false }),
+      storeService.updateStore(STORE_ID, { deliveryEnabled: false }),
     ).rejects.toMatchObject({ code: 'NO_FULFILLMENT_ENABLED' });
   });
 
   it('should reject an unknown timezone', async () => {
     await expect(
-      storeService.updateStore({ timezone: 'Mars/Olympus' }),
+      storeService.updateStore(STORE_ID, { timezone: 'Mars/Olympus' }),
     ).rejects.toMatchObject({ code: 'INVALID_TIMEZONE' });
   });
 
   it('should reject overlapping opening hours (STO-R04)', async () => {
     await expect(
-      storeService.setOpeningHours([
+      storeService.setOpeningHours(STORE_ID, [
         { weekday: EWeekday.MONDAY, opensAt: '10:00', closesAt: '15:00' },
         { weekday: EWeekday.MONDAY, opensAt: '12:00', closesAt: '18:00' },
       ]),
@@ -199,8 +248,9 @@ describe('When the owner uploads a store image', () => {
   };
 
   it('should replace the logo and delete the previous asset', async () => {
-    const first = await storeService.setStoreImage(EStoreImageKind.LOGO, IMAGE);
+    const first = await storeService.setStoreImage(STORE_ID, EStoreImageKind.LOGO, IMAGE);
     const second = await storeService.setStoreImage(
+      STORE_ID,
       EStoreImageKind.LOGO,
       IMAGE,
     );
@@ -211,9 +261,10 @@ describe('When the owner uploads a store image', () => {
   });
 
   it('should keep the logo when the banner changes', async () => {
-    await storeService.setStoreImage(EStoreImageKind.LOGO, IMAGE);
+    await storeService.setStoreImage(STORE_ID, EStoreImageKind.LOGO, IMAGE);
 
     const store = await storeService.setStoreImage(
+      STORE_ID,
       EStoreImageKind.BANNER,
       IMAGE,
     );
@@ -225,10 +276,10 @@ describe('When the owner uploads a store image', () => {
 
 describe('When the scheduler refreshes the store status (STO-R05)', () => {
   it('should reset an expired forced status back to AUTO', async () => {
-    await storeService.setManualStatus(EManualStatus.FORCED_OPEN);
+    await storeService.setManualStatus(STORE_ID, EManualStatus.FORCED_OPEN);
     clock.advanceSeconds(3 * 3600);
 
-    const status = await storeService.refreshStoreStatus();
+    const status = await storeService.refreshStoreStatus(STORE_ID);
 
     expect(status.manualStatus).toBe(EManualStatus.AUTO);
     expect(stored?.manualStatus).toBe(EManualStatus.AUTO);

@@ -62,11 +62,15 @@ export class Store implements IStore {
     this.updatedAt = props.updatedAt;
   }
 
-  static withDefaults(id: string, now: Date): Store {
+  static withDefaults(
+    id: string,
+    now: Date,
+    { name, slug }: Pick<IStore, 'name' | 'slug'>,
+  ): Store {
     return new Store({
       id,
-      name: 'Digital Menu',
-      slug: 'digital-menu',
+      name,
+      slug,
       description: '',
       phone: '',
       address: {
@@ -81,7 +85,7 @@ export class Store implements IStore {
       openingHours: [],
       manualStatus: EManualStatus.AUTO,
       minimumOrderInCents: 0,
-      deliveryEnabled: true,
+      deliveryEnabled: false,
       pickupEnabled: true,
       pickupEtaMinutes: 20,
       isPublished: false,

@@ -36,8 +36,13 @@ export async function resetDatabase(): Promise<void> {
 
 async function seedStore(): Promise<void> {
   const storeService = StoreServiceFactory.create();
-  await storeService.updateStore(STORE_SEED);
-  await storeService.setOpeningHours(OPENING_HOURS_SEED);
+  const store = await storeService.ensureDefaultStore();
+  const { slug, ...settings } = STORE_SEED;
+  await storeService.updateStore(store.id, {
+    ...settings,
+    ...(store.slug !== slug && { slug }),
+  });
+  await storeService.setOpeningHours(store.id, OPENING_HOURS_SEED);
 }
 
 async function seedCatalog(): Promise<void> {
@@ -122,7 +127,7 @@ async function seedCoupons(): Promise<void> {
 
 async function seedStaffUsers(): Promise<void> {
   const staffUserService = StaffUserServiceFactory.create();
-  const store = await StoreServiceFactory.create().getStore();
+  const store = await StoreServiceFactory.create().ensureDefaultStore();
   for (const staffUser of STAFF_USERS_SEED) {
     if (!(await MstaffUser.exists({ email: staffUser.email }))) {
       await staffUserService.createStaffUser({
@@ -159,15 +164,17 @@ async function seedCustomerAndOrders(): Promise<void> {
   }
 
   const storeService = StoreServiceFactory.create();
+  const store = await storeService.ensureDefaultStore();
   const { items: products } = await ProductServiceFactory.create().listProducts(
     { search: 'Coca-Cola', ...PRODUCTS_PAGE },
   );
   const [address] = await customerService.listAddresses(customer.id);
   const cart = {
+    storeId: store.id,
     customerId: customer.id,
     items: [{ productId: products[0].id, quantity: 4, options: [] }],
   };
-  await storeService.setManualStatus(EManualStatus.FORCED_OPEN);
+  await storeService.setManualStatus(store.id, EManualStatus.FORCED_OPEN);
   try {
     const completed = await orderService.createOrder({
       ...cart,
@@ -204,7 +211,7 @@ async function seedCustomerAndOrders(): Promise<void> {
       status: EOrderStatus.PREPARING,
     });
   } finally {
-    await storeService.setManualStatus(EManualStatus.AUTO);
+    await storeService.setManualStatus(store.id, EManualStatus.AUTO);
   }
 }
 

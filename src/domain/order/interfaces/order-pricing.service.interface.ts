@@ -27,6 +27,7 @@ export interface ICartItem {
 }
 
 export interface IParamsQuoteOrder {
+  storeId: string;
   customerId: string;
   items: ICartItem[];
   fulfillmentType: EFulfillmentType;

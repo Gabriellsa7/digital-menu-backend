@@ -6,39 +6,66 @@ import { StoreRepositoryWrite } from '../../infrastructure/repository/store/stor
 const storeRepositoryRead = new StoreRepositoryRead();
 const storeRepositoryWrite = new StoreRepositoryWrite();
 
+function aStore(id: string, slug: string) {
+  return Store.withDefaults(id, new Date(), { name: 'Burger House', slug });
+}
+
 beforeEach(async () => {
   await Mstore.deleteMany({});
   await Mstore.syncIndexes();
 });
 
-describe('When we persist the singleton store (STO-R01)', () => {
-  it('should keep a single document when created concurrently', async () => {
-    await Promise.all(
-      ['a', 'b', 'c'].map((id) =>
-        storeRepositoryWrite.createStoreIfMissing(
-          Store.withDefaults(id, new Date()),
-        ),
-      ),
-    );
+describe('When we persist stores', () => {
+  it('should keep many stores and find each one by id or slug', async () => {
+    await storeRepositoryWrite.createStore(aStore('store-a', 'casa-brasa'));
+    await storeRepositoryWrite.createStore(aStore('store-b', 'pizza-boa'));
 
-    await expect(Mstore.countDocuments()).resolves.toBe(1);
+    await expect(
+      storeRepositoryRead.findStoreBySlug('pizza-boa'),
+    ).resolves.toMatchObject({ id: 'store-b' });
+    await expect(
+      storeRepositoryRead.findStoreById('store-a'),
+    ).resolves.toMatchObject({ slug: 'casa-brasa' });
+    await expect(storeRepositoryRead.findFirstStore()).resolves.toMatchObject({
+      id: 'store-a',
+    });
   });
 
-  it('should set and unset fields without leaking mongo internals', async () => {
-    await storeRepositoryWrite.createStoreIfMissing(
-      Store.withDefaults('store-1', new Date()),
-    );
-    await storeRepositoryWrite.updateStore({
-      set: { name: 'Burger House', manualStatusUntil: new Date() },
+  it('should reject a duplicated slug (TEN-R01)', async () => {
+    await storeRepositoryWrite.createStore(aStore('store-a', 'casa-brasa'));
+
+    await expect(
+      storeRepositoryWrite.createStore(aStore('store-b', 'casa-brasa')),
+    ).rejects.toThrow(/duplicate key/);
+  });
+
+  it('should list only active stores', async () => {
+    await storeRepositoryWrite.createStore(aStore('store-a', 'casa-brasa'));
+    await storeRepositoryWrite.createStore({
+      ...aStore('store-b', 'pizza-boa'),
+      isActive: false,
     });
 
-    const updated = await storeRepositoryWrite.updateStore({
+    const stores = await storeRepositoryRead.listActiveStores();
+
+    expect(stores.map(({ id }) => id)).toEqual(['store-a']);
+  });
+
+  it('should set and unset fields of one store without leaking mongo internals', async () => {
+    await storeRepositoryWrite.createStore(aStore('store-a', 'casa-brasa'));
+    await storeRepositoryWrite.createStore(aStore('store-b', 'pizza-boa'));
+    await storeRepositoryWrite.updateStore('store-a', {
+      set: { name: 'Casa Brasa', manualStatusUntil: new Date() },
+    });
+
+    const updated = await storeRepositoryWrite.updateStore('store-a', {
       unset: ['manualStatusUntil'],
     });
-    const found = await storeRepositoryRead.findStore();
+    const other = await storeRepositoryRead.findStoreById('store-b');
 
-    expect(updated).toMatchObject({ id: 'store-1', name: 'Burger House' });
+    expect(updated).toMatchObject({ id: 'store-a', name: 'Casa Brasa' });
     expect(updated).not.toHaveProperty('manualStatusUntil');
-    expect(found).not.toHaveProperty('_id');
+    expect(updated).not.toHaveProperty('_id');
+    expect(other?.name).toBe('Burger House');
   });
 });

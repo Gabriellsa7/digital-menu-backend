@@ -32,6 +32,11 @@ export interface IParamsUpdateStore {
   pickupEtaMinutes?: number;
 }
 
+export interface IParamsCreateStore extends IParamsUpdateStore {
+  name: string;
+  isPublished?: boolean;
+}
+
 export interface IStoreWithStatus {
   store: IStore;
   status: IStoreStatus;
@@ -46,12 +51,25 @@ export interface IParamsStoreService {
 }
 
 export interface IStoreService {
-  getStore(): Promise<IStore>;
-  getStoreWithStatus(): Promise<IStoreWithStatus>;
-  updateStore(params: IParamsUpdateStore): Promise<IStore>;
-  setOpeningHours(openingHours: IOpeningHour[]): Promise<IStore>;
-  setManualStatus(manualStatus: EManualStatus): Promise<IStoreWithStatus>;
-  assertAcceptingOrders(): Promise<IStore>;
-  refreshStoreStatus(): Promise<IStoreStatus>;
-  setStoreImage(kind: EStoreImageKind, file?: IImageFile): Promise<IStore>;
+  createStore(params: IParamsCreateStore): Promise<IStore>;
+  ensureDefaultStore(): Promise<IStore>;
+  getStore(storeId: string): Promise<IStore>;
+  getStoreWithStatus(storeId: string): Promise<IStoreWithStatus>;
+  listActiveStores(): Promise<IStore[]>;
+  updateStore(storeId: string, params: IParamsUpdateStore): Promise<IStore>;
+  setOpeningHours(
+    storeId: string,
+    openingHours: IOpeningHour[],
+  ): Promise<IStore>;
+  setManualStatus(
+    storeId: string,
+    manualStatus: EManualStatus,
+  ): Promise<IStoreWithStatus>;
+  assertAcceptingOrders(storeId: string): Promise<IStore>;
+  refreshStoreStatus(storeId: string): Promise<IStoreStatus>;
+  setStoreImage(
+    storeId: string,
+    kind: EStoreImageKind,
+    file?: IImageFile,
+  ): Promise<IStore>;
 }

@@ -24,8 +24,12 @@ export async function setupCheckout() {
     Morder.deleteMany({}),
   ]);
   const storeService = StoreServiceFactory.create();
-  await storeService.updateStore({ minimumOrderInCents: 2000 });
-  await storeService.setManualStatus(EManualStatus.FORCED_OPEN);
+  const store = await storeService.ensureDefaultStore();
+  await storeService.updateStore(store.id, {
+    minimumOrderInCents: 2000,
+    deliveryEnabled: true,
+  });
+  await storeService.setManualStatus(store.id, EManualStatus.FORCED_OPEN);
 
   const zone = await DeliveryZoneServiceFactory.create().createDeliveryZone({
     displayName: 'Vila Mariana',
@@ -61,5 +65,13 @@ export async function setupCheckout() {
     },
   });
 
-  return { ...session, zone, smash, extras, address, storeService };
+  return {
+    ...session,
+    storeId: store.id,
+    zone,
+    smash,
+    extras,
+    address,
+    storeService,
+  };
 }

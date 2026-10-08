@@ -8,7 +8,7 @@ import { StoreServiceFactory } from '../../infrastructure/config/factories/store
 export const STAFF_PASSWORD = 'secret123';
 
 export async function createStaffUser(role = EStaffRole.STAFF) {
-  const store = await StoreServiceFactory.create().getStore();
+  const store = await StoreServiceFactory.create().ensureDefaultStore();
   return StaffUserServiceFactory.create().createStaffUser({
     storeId: store.id,
     name: `${role} user`,

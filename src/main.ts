@@ -55,7 +55,7 @@ const app = new Server({
 
 async function start() {
   await app.databaseSetup();
-  const store = await StoreServiceFactory.create().getStore();
+  const store = await StoreServiceFactory.create().ensureDefaultStore();
   await ensureOwner({
     staffUserService: StaffUserServiceFactory.create(),
     storeId: store.id,

@@ -10,6 +10,7 @@ async function placeOrder(fulfillmentType: 'DELIVERY' | 'PICKUP') {
   const { body } = await as(checkout.accessToken)
     .post('/me/orders')
     .send({
+      storeId: checkout.storeId,
       items: [{ productId: checkout.smash.id, quantity: 1 }],
       fulfillmentType,
       ...(fulfillmentType === 'DELIVERY' && {

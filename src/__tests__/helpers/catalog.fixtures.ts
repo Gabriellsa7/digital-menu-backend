@@ -14,7 +14,11 @@ const NOW = new Date('2026-10-01T12:00:00Z');
 
 export function aStoreFixture(overrides: Partial<IStore> = {}): IStore {
   return {
-    ...Store.withDefaults('store-1', NOW),
+    ...Store.withDefaults('store-1', NOW, {
+      name: 'Digital Menu',
+      slug: 'digital-menu',
+    }),
+    deliveryEnabled: true,
     openingHours: [
       { weekday: EWeekday.THURSDAY, opensAt: '00:00', closesAt: '23:59' },
     ],
