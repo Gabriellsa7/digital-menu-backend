@@ -21,6 +21,7 @@ export function authenticate(tokenService: ITokenService): RequestHandler {
         subjectId: payload.sub,
         subjectType: payload.typ,
         ...(payload.role && { role: payload.role }),
+        ...(payload.storeId && { storeId: payload.storeId }),
       };
       next();
     } catch (error) {

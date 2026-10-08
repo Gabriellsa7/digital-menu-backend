@@ -18,6 +18,7 @@ import { CustomerOrderControllerFactory } from './infrastructure/config/factorie
 import { AdminOrderControllerFactory } from './infrastructure/config/factories/admin-order.controller.factory';
 import { StaffAuthControllerFactory } from './infrastructure/config/factories/staff-auth.controller.factory';
 import { StaffUserServiceFactory } from './infrastructure/config/factories/staff-user.service.factory';
+import { StoreServiceFactory } from './infrastructure/config/factories/store.service.factory';
 import { ensureOwner } from './infrastructure/bootstrap/ensure-owner';
 import { TickRunnerFactory } from './infrastructure/config/factories/tick-runner.factory';
 import { TokenServiceFactory } from './infrastructure/config/factories/token.service.factory';
@@ -54,8 +55,10 @@ const app = new Server({
 
 async function start() {
   await app.databaseSetup();
+  const store = await StoreServiceFactory.create().getStore();
   await ensureOwner({
     staffUserService: StaffUserServiceFactory.create(),
+    storeId: store.id,
     name: env.bootstrapOwnerName,
     email: env.bootstrapOwnerEmail,
     password: env.bootstrapOwnerPassword,

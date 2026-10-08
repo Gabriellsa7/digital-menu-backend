@@ -25,6 +25,10 @@ export function authorize({
       next(new ForbiddenError());
       return;
     }
+    if (subjectType === ESubjectType.STAFF && !req.auth.storeId) {
+      next(new UnauthorizedError('Invalid access token', 'TOKEN_INVALID'));
+      return;
+    }
     next();
   };
 }

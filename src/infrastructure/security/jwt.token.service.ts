@@ -56,6 +56,7 @@ export class JwtTokenService implements ITokenService {
       sub: decoded.sub,
       typ: decoded.typ,
       ...(decoded.role && { role: decoded.role }),
+      ...(decoded.storeId && { storeId: decoded.storeId }),
     };
   }
 
@@ -76,8 +77,11 @@ export class JwtTokenService implements ITokenService {
     const hasValidRole =
       decoded.role === undefined ||
       Object.values(EStaffRole).includes(decoded.role);
+    const hasValidStoreId =
+      decoded.storeId === undefined || typeof decoded.storeId === 'string';
     return (
       typeof decoded.sub === 'string' &&
+      hasValidStoreId &&
       Object.values(ESubjectType).includes(decoded.typ) &&
       hasValidRole
     );

@@ -23,6 +23,7 @@ describe('When we authenticate a request', () => {
       sub: 'staff-1',
       typ: ESubjectType.STAFF,
       role: EStaffRole.STAFF,
+      storeId: 'store-1',
     });
     const req = aRequest({ headers: { authorization: 'Bearer valid' } });
     const next = jest.fn();
@@ -34,6 +35,7 @@ describe('When we authenticate a request', () => {
       subjectId: 'staff-1',
       subjectType: ESubjectType.STAFF,
       role: EStaffRole.STAFF,
+      storeId: 'store-1',
     });
     expect(next).toHaveBeenCalledWith();
   });
@@ -119,11 +121,27 @@ describe('When we authorize a request', () => {
         subjectId: 'staff-1',
         subjectType: ESubjectType.STAFF,
         role: EStaffRole.OWNER,
+        storeId: 'store-1',
       },
       { subjectType: ESubjectType.STAFF, roles: [EStaffRole.OWNER] },
     );
 
     expect(next).toHaveBeenCalledWith();
+  });
+
+  it('should reject a staff token without a store (TEN-R03)', () => {
+    const next = runAuthorize(
+      {
+        subjectId: 'staff-1',
+        subjectType: ESubjectType.STAFF,
+        role: EStaffRole.OWNER,
+      },
+      { subjectType: ESubjectType.STAFF },
+    );
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'TOKEN_INVALID' }),
+    );
   });
 
   it('should fail with TOKEN_MISSING when authenticate did not run', () => {

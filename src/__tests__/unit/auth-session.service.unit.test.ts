@@ -85,17 +85,19 @@ describe('When we start a session', () => {
     );
   });
 
-  it('should put the staff role in the access token', () => {
+  it('should put the staff role and store in the access token', () => {
     authSessionService.createAccessToken({
       subjectId: 'staff-1',
       subjectType: ESubjectType.STAFF,
       role: EStaffRole.OWNER,
+      storeId: 'store-1',
     });
 
     expect(tokenService.signAccessToken).toHaveBeenCalledWith({
       sub: 'staff-1',
       typ: ESubjectType.STAFF,
       role: EStaffRole.OWNER,
+      storeId: 'store-1',
     });
   });
 });

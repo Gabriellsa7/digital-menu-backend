@@ -9,10 +9,12 @@ export interface IAuthSubject {
   subjectId: string;
   subjectType: ESubjectType;
   role?: EStaffRole;
+  storeId?: string;
 }
 
 export interface IAccessTokenPayload {
   sub: string;
   typ: ESubjectType;
   role?: EStaffRole;
+  storeId?: string;
 }

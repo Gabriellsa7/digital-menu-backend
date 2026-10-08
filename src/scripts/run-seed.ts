@@ -122,9 +122,13 @@ async function seedCoupons(): Promise<void> {
 
 async function seedStaffUsers(): Promise<void> {
   const staffUserService = StaffUserServiceFactory.create();
+  const store = await StoreServiceFactory.create().getStore();
   for (const staffUser of STAFF_USERS_SEED) {
     if (!(await MstaffUser.exists({ email: staffUser.email }))) {
-      await staffUserService.createStaffUser(staffUser);
+      await staffUserService.createStaffUser({
+        ...staffUser,
+        storeId: store.id,
+      });
     }
   }
 }

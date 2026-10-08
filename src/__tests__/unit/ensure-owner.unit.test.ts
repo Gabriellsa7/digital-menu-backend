@@ -15,12 +15,15 @@ describe('When the API boots', () => {
 
     await ensureOwner({
       staffUserService,
+      storeId: 'store-1',
       name: 'Owner',
       email: 'owner@menu.dev',
       password: 'owner1234',
     });
 
+    expect(staffUserService.hasOwner).toHaveBeenCalledWith('store-1');
     expect(staffUserService.createStaffUser).toHaveBeenCalledWith({
+      storeId: 'store-1',
       name: 'Owner',
       email: 'owner@menu.dev',
       password: 'owner1234',
@@ -36,6 +39,7 @@ describe('When the API boots', () => {
 
     await ensureOwner({
       staffUserService,
+      storeId: 'store-1',
       name: 'Owner',
       email,
       password: 'owner1234',

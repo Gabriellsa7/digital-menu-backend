@@ -45,6 +45,7 @@ export function createSocketServer({
         subjectId: payload.sub,
         subjectType: payload.typ,
         ...(payload.role && { role: payload.role }),
+        ...(payload.storeId && { storeId: payload.storeId }),
       } satisfies IAuthSubject;
       next();
     } catch {

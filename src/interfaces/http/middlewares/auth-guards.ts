@@ -1,4 +1,5 @@
-import { RequestHandler } from 'express';
+import '../types/express-request';
+import { Request, RequestHandler } from 'express';
 import { ESubjectType } from '../../../domain/auth/interfaces/auth-subject.interface';
 import { ITokenService } from '../../../domain/auth/interfaces/token.service.interface';
 import { EStaffRole } from '../../../domain/staff-user/interfaces/staff-user.interface';
@@ -9,6 +10,10 @@ export interface IAuthGuards {
   staff: RequestHandler[];
   owner: RequestHandler[];
   customer: RequestHandler[];
+}
+
+export function staffStoreId(req: Request): string {
+  return req.auth!.storeId!;
 }
 
 export function createAuthGuards(tokenService: ITokenService): IAuthGuards {

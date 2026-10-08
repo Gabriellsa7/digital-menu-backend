@@ -131,6 +131,7 @@ export class AuthSessionService implements IAuthSessionService {
       sub: subject.subjectId,
       typ: subject.subjectType,
       ...(subject.role && { role: subject.role }),
+      ...(subject.storeId && { storeId: subject.storeId }),
     });
   }
 

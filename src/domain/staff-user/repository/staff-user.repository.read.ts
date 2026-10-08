@@ -12,6 +12,6 @@ export interface IStaffUserRepositoryRead {
   findStaffUserByEmailWithPassword(
     email: string,
   ): Promise<IStaffUserWithPassword | null>;
-  listStaffUsers(): Promise<IStaffUser[]>;
-  countActiveOwners(): Promise<number>;
+  listStaffUsers(storeId: string): Promise<IStaffUser[]>;
+  countActiveOwners(storeId: string): Promise<number>;
 }

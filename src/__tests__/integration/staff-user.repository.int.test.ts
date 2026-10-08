@@ -7,10 +7,15 @@ import { StaffUserRepositoryWrite } from '../../infrastructure/repository/staff-
 const staffUserRepositoryRead = new StaffUserRepositoryRead();
 const staffUserRepositoryWrite = new StaffUserRepositoryWrite();
 
-function aStaffUser(email: string, role = EStaffRole.STAFF) {
+function aStaffUser(
+  email: string,
+  role = EStaffRole.STAFF,
+  storeId = 'store-1',
+) {
   const now = new Date();
   return {
     id: randomUUID(),
+    storeId,
     name: 'Robin',
     email,
     passwordHash: 'stored-hash',
@@ -32,7 +37,7 @@ describe('When we persist staff users', () => {
       aStaffUser('robin@menu.dev'),
     );
     const found = await staffUserRepositoryRead.findStaffUserById(created.id);
-    const listed = await staffUserRepositoryRead.listStaffUsers();
+    const listed = await staffUserRepositoryRead.listStaffUsers('store-1');
 
     expect(created).not.toHaveProperty('passwordHash');
     expect(created).not.toHaveProperty('_id');
@@ -63,6 +68,22 @@ describe('When we persist staff users', () => {
     ).rejects.toThrow(/duplicate key/);
   });
 
+  it('should list and count staff users of one store only', async () => {
+    await staffUserRepositoryWrite.createStaffUser(
+      aStaffUser('a@menu.dev', EStaffRole.OWNER, 'store-a'),
+    );
+    await staffUserRepositoryWrite.createStaffUser(
+      aStaffUser('b@menu.dev', EStaffRole.OWNER, 'store-b'),
+    );
+
+    const listed = await staffUserRepositoryRead.listStaffUsers('store-a');
+
+    expect(listed.map(({ email }) => email)).toEqual(['a@menu.dev']);
+    await expect(
+      staffUserRepositoryRead.countActiveOwners('store-b'),
+    ).resolves.toBe(1);
+  });
+
   it('should count only active owners', async () => {
     const owner = await staffUserRepositoryWrite.createStaffUser(
       aStaffUser('owner@menu.dev', EStaffRole.OWNER),
@@ -74,7 +95,9 @@ describe('When we persist staff users', () => {
       isActive: false,
     });
 
-    await expect(staffUserRepositoryRead.countActiveOwners()).resolves.toBe(1);
+    await expect(
+      staffUserRepositoryRead.countActiveOwners('store-1'),
+    ).resolves.toBe(1);
   });
 
   it('should replace the password hash', async () => {

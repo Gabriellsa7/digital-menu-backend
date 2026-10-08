@@ -20,6 +20,7 @@ const TOKENS = {
 function aStaffUser(overrides: Partial<IStaffUser> = {}): IStaffUser {
   return {
     id: 'staff-1',
+    storeId: 'store-1',
     name: 'Nami',
     email: 'nami@menu.dev',
     role: EStaffRole.OWNER,
@@ -73,6 +74,7 @@ describe('When a staff user logs in', () => {
         subjectId: 'staff-1',
         subjectType: ESubjectType.STAFF,
         role: EStaffRole.OWNER,
+        storeId: 'store-1',
       },
       userAgent: undefined,
     });
@@ -97,6 +99,7 @@ describe('When a staff user refreshes the session', () => {
       subjectId: 'staff-1',
       subjectType: ESubjectType.STAFF,
       role: EStaffRole.STAFF,
+      storeId: 'store-1',
     });
   });
 

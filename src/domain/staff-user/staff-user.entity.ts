@@ -7,6 +7,7 @@ const PASSWORD_NUMBER_PATTERN = /\d/;
 
 export class StaffUser implements IStaffUser {
   public readonly id: string;
+  public readonly storeId: string;
   public readonly name: string;
   public readonly email: string;
   public readonly role: EStaffRole;
@@ -17,6 +18,7 @@ export class StaffUser implements IStaffUser {
 
   constructor(props: IStaffUser) {
     this.id = props.id;
+    this.storeId = props.storeId;
     this.name = props.name;
     this.email = props.email;
     this.role = props.role;

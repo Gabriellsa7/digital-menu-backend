@@ -6,6 +6,7 @@ import { IStaffUserRepositoryWrite } from '../repository/staff-user.repository.w
 import { EStaffRole, IStaffUser } from './staff-user.interface';
 
 export interface IParamsCreateStaffUser {
+  storeId: string;
   name: string;
   email: string;
   password: string;
@@ -13,12 +14,14 @@ export interface IParamsCreateStaffUser {
 }
 
 export interface IParamsUpdateStaffUser {
+  storeId: string;
   id: string;
   name?: string;
   role?: EStaffRole;
 }
 
 export interface IParamsSetStaffUserActive {
+  storeId: string;
   id: string;
   isActive: boolean;
 }
@@ -44,8 +47,9 @@ export interface IParamsStaffUserService {
 
 export interface IStaffUserService {
   createStaffUser(params: IParamsCreateStaffUser): Promise<IStaffUser>;
-  listStaffUsers(): Promise<IStaffUser[]>;
+  listStaffUsers(storeId: string): Promise<IStaffUser[]>;
   getStaffUserById(id: string): Promise<IStaffUser>;
+  getStaffUserInStore(storeId: string, id: string): Promise<IStaffUser>;
   updateStaffUser(params: IParamsUpdateStaffUser): Promise<IStaffUser>;
   setStaffUserActive(params: IParamsSetStaffUserActive): Promise<IStaffUser>;
   changeStaffUserPassword(
@@ -54,5 +58,5 @@ export interface IStaffUserService {
   verifyStaffUserCredentials(
     params: IParamsVerifyStaffUserCredentials,
   ): Promise<IStaffUser>;
-  hasOwner(): Promise<boolean>;
+  hasOwner(storeId: string): Promise<boolean>;
 }
