@@ -281,10 +281,9 @@ describe('When a customer updates their profile', () => {
 });
 
 describe('When a customer manages addresses', () => {
-  it('should resolve the delivery zone of a new address (CUS-R03)', async () => {
+  it('should save a new address without any delivery zone (CUS-R03)', async () => {
     const existing = aCustomer();
     customerRepositoryRead.findCustomerById.mockResolvedValue(existing);
-    deliveryZoneResolver.resolveDeliveryZoneId.mockResolvedValue('zone-1');
     applyUpdatesTo(existing);
 
     const address = await customerService.addAddress({
@@ -292,29 +291,30 @@ describe('When a customer manages addresses', () => {
       address: ADDRESS_DATA,
     });
 
+    expect(address).toMatchObject({ ...ADDRESS_DATA, isDefault: true });
+    expect(address).not.toHaveProperty('deliveryZoneId');
+    expect(deliveryZoneResolver.resolveDeliveryZoneId).not.toHaveBeenCalled();
+  });
+
+  it('should resolve the zones of a store when listing for it (CUS-R03)', async () => {
+    const home: IAddress = { ...ADDRESS_DATA, id: 'home', isDefault: true };
+    const work: IAddress = { ...ADDRESS_DATA, id: 'work', isDefault: false };
+    customerRepositoryRead.findCustomerById.mockResolvedValue(
+      aCustomer({ addresses: [home, work] }),
+    );
+    deliveryZoneResolver.resolveDeliveryZoneId
+      .mockResolvedValueOnce('zone-1')
+      .mockResolvedValueOnce(undefined);
+
+    const addresses = await customerService.listAddresses('customer-1', 'store-1');
+
     expect(deliveryZoneResolver.resolveDeliveryZoneId).toHaveBeenCalledWith(
+      'store-1',
       'Vila Mariana',
       'São Paulo',
     );
-    expect(address).toMatchObject({
-      ...ADDRESS_DATA,
-      deliveryZoneId: 'zone-1',
-      isDefault: true,
-    });
-  });
-
-  it('should save an unserved address without a delivery zone', async () => {
-    const existing = aCustomer();
-    customerRepositoryRead.findCustomerById.mockResolvedValue(existing);
-    deliveryZoneResolver.resolveDeliveryZoneId.mockResolvedValue(undefined);
-    applyUpdatesTo(existing);
-
-    const address = await customerService.addAddress({
-      customerId: existing.id,
-      address: ADDRESS_DATA,
-    });
-
-    expect(address).not.toHaveProperty('deliveryZoneId');
+    expect(addresses[0].deliveryZoneId).toBe('zone-1');
+    expect(addresses[1]).not.toHaveProperty('deliveryZoneId');
   });
 
   it('should update, remove, list and set the default address', async () => {

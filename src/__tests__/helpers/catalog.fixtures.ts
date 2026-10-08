@@ -97,6 +97,7 @@ export function aDeliveryZoneFixture(
 ): IDeliveryZone {
   return {
     id: 'zone-1',
+    storeId: 'store-1',
     neighborhood: 'vila mariana',
     displayName: 'Vila Mariana',
     city: 'São Paulo',
@@ -140,6 +141,7 @@ export function aCustomerFixture(overrides: Partial<ICustomer> = {}): ICustomer 
 export function aCouponFixture(overrides: Partial<ICoupon> = {}): ICoupon {
   return {
     id: 'coupon-1',
+    storeId: 'store-1',
     code: 'FRETEGRATIS',
     type: ECouponType.FREE_DELIVERY,
     value: 0,
@@ -150,6 +152,7 @@ export function aCouponFixture(overrides: Partial<ICoupon> = {}): ICoupon {
     usedCount: 0,
     firstOrderOnly: false,
     isActive: true,
+    isPublic: false,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,

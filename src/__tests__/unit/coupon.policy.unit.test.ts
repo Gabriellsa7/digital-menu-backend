@@ -15,6 +15,8 @@ const NOW = new Date('2026-10-01T12:00:00Z');
 function aCoupon(overrides: Partial<ICoupon> = {}): ICoupon {
   return {
     id: 'coupon-1',
+    storeId: 'store-1',
+    isPublic: false,
     code: 'BEMVINDO10',
     type: ECouponType.PERCENTAGE,
     value: 10,

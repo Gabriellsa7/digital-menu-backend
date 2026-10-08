@@ -4,7 +4,8 @@ import { EStaffRole } from '../../domain/staff-user/interfaces/staff-user.interf
 import { MdeliveryZone } from '../../infrastructure/db/mongo/models/delivery-zone.model';
 import { loginCustomerWithOtp } from '../helpers/customer-session.helper';
 import { as } from '../helpers/http.helper';
-import { loginAs } from '../helpers/staff-session.helper';
+import { StoreServiceFactory } from '../../infrastructure/config/factories/store.service.factory';
+import { createStore, loginAs } from '../helpers/staff-session.helper';
 
 const A_ZONE = {
   name: 'Vila Mariana',
@@ -15,11 +16,13 @@ const A_ZONE = {
 };
 
 let ownerToken: string;
+let store: { id: string; slug: string };
 
 beforeEach(async () => {
   await MdeliveryZone.deleteMany({});
   await MdeliveryZone.syncIndexes();
   ({ accessToken: ownerToken } = await loginAs(EStaffRole.OWNER));
+  store = await StoreServiceFactory.create().ensureDefaultStore();
 });
 
 async function createZone(overrides: Record<string, unknown> = {}) {
@@ -77,7 +80,9 @@ describe('When anyone reads the public delivery zones', () => {
     await createZone();
     await createZone({ name: 'Moema', isActive: false });
 
-    const { body } = await supertest(app.app).get('/public/delivery-zones');
+    const { body } = await supertest(app.app).get(
+      `/public/stores/${store.slug}/delivery-zones`,
+    );
 
     expect(body).toHaveLength(1);
     expect(body[0]).not.toHaveProperty('isActive');
@@ -87,10 +92,10 @@ describe('When anyone reads the public delivery zones', () => {
     await createZone();
 
     const found = await supertest(app.app)
-      .get('/public/delivery-zones/resolve')
+      .get(`/public/stores/${store.slug}/delivery-zones/resolve`)
       .query({ neighborhood: 'VILA MARIÁNA', city: 'sao paulo' });
     const missing = await supertest(app.app)
-      .get('/public/delivery-zones/resolve')
+      .get(`/public/stores/${store.slug}/delivery-zones/resolve`)
       .query({ neighborhood: 'Moema', city: 'São Paulo' });
 
     expect(found.body.name).toBe('Vila Mariana');
@@ -98,12 +103,13 @@ describe('When anyone reads the public delivery zones', () => {
   });
 });
 
-describe('When a customer saves an address in a served neighborhood (CUS-R03)', () => {
-  it('should resolve the delivery zone of the address', async () => {
+describe('When a customer lists addresses for a store (CUS-R03)', () => {
+  it('should resolve the delivery zone of that store only', async () => {
     const zone = await createZone();
+    const otherStore = await createStore('Pizza Boa');
     const { accessToken } = await loginCustomerWithOtp();
 
-    const { body } = await as(accessToken).post('/me/addresses').send({
+    const { body: saved } = await as(accessToken).post('/me/addresses').send({
       label: 'Casa',
       zipCode: '04101300',
       street: 'Rua Vergueiro',
@@ -112,7 +118,15 @@ describe('When a customer saves an address in a served neighborhood (CUS-R03)', 
       city: 'São Paulo',
       state: 'SP',
     });
+    const served = await as(accessToken).get(
+      `/me/addresses?storeId=${store.id}`,
+    );
+    const notServed = await as(accessToken).get(
+      `/me/addresses?storeId=${otherStore.id}`,
+    );
 
-    expect(body.deliveryZoneId).toBe(zone.body.id);
+    expect(saved).not.toHaveProperty('deliveryZoneId');
+    expect(served.body[0].deliveryZoneId).toBe(zone.body.id);
+    expect(notServed.body[0]).not.toHaveProperty('deliveryZoneId');
   });
 });

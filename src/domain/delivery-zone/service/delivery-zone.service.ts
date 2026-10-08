@@ -31,18 +31,27 @@ export class DeliveryZoneService implements IDeliveryZoneService {
   }
 
   @ErrorHandler()
-  async listDeliveryZones(activeOnly: boolean): Promise<IDeliveryZone[]> {
+  async listDeliveryZones(
+    storeId: string,
+    activeOnly: boolean,
+  ): Promise<IDeliveryZone[]> {
     return this.deliveryZoneRepositoryRead.listDeliveryZones(
+      storeId,
       activeOnly ? { isActive: true } : {},
     );
   }
 
   @ErrorHandler()
-  async getDeliveryZoneById(id: string): Promise<IDeliveryZone> {
+  async getDeliveryZoneById(
+    storeId: string,
+    id: string,
+  ): Promise<IDeliveryZone> {
     const deliveryZone =
       await this.deliveryZoneRepositoryRead.findDeliveryZoneById(id);
 
-    return deliveryZone ? deliveryZone : this.throwDeliveryZoneNotFound();
+    return deliveryZone?.storeId === storeId
+      ? deliveryZone
+      : this.throwDeliveryZoneNotFound();
   }
 
   @ErrorHandler()
@@ -63,10 +72,11 @@ export class DeliveryZoneService implements IDeliveryZoneService {
 
   @ErrorHandler()
   async updateDeliveryZone({
+    storeId,
     id,
     ...changes
   }: IParamsUpdateDeliveryZone): Promise<IDeliveryZone> {
-    const current = await this.getDeliveryZoneById(id);
+    const current = await this.getDeliveryZoneById(storeId, id);
     const defined = Object.fromEntries(
       Object.entries(changes).filter(([, value]) => value !== undefined),
     );
@@ -83,7 +93,8 @@ export class DeliveryZoneService implements IDeliveryZoneService {
   }
 
   @ErrorHandler()
-  async deleteDeliveryZone(id: string): Promise<void> {
+  async deleteDeliveryZone(storeId: string, id: string): Promise<void> {
+    await this.getDeliveryZoneById(storeId, id);
     const deleted =
       await this.deliveryZoneRepositoryWrite.deleteDeliveryZoneById(id);
     if (!deleted) {
@@ -93,29 +104,33 @@ export class DeliveryZoneService implements IDeliveryZoneService {
 
   @ErrorHandler()
   async resolveDeliveryZone(
+    storeId: string,
     neighborhood: string,
     city: string,
   ): Promise<IDeliveryZone> {
-    const deliveryZone = await this.findActiveZone(neighborhood, city);
+    const deliveryZone = await this.findActiveZone(storeId, neighborhood, city);
 
     return deliveryZone ? deliveryZone : this.throwDeliveryZoneNotFound();
   }
 
   @ErrorHandler()
   async resolveDeliveryZoneId(
+    storeId: string,
     neighborhood: string,
     city: string,
   ): Promise<string | undefined> {
-    const deliveryZone = await this.findActiveZone(neighborhood, city);
+    const deliveryZone = await this.findActiveZone(storeId, neighborhood, city);
     return deliveryZone?.id;
   }
 
   private async findActiveZone(
+    storeId: string,
     neighborhood: string,
     city: string,
   ): Promise<IDeliveryZone | null> {
     const deliveryZone =
       await this.deliveryZoneRepositoryRead.findDeliveryZoneByKeys(
+        storeId,
         normalizeText(neighborhood),
         normalizeText(city),
       );
@@ -127,6 +142,7 @@ export class DeliveryZoneService implements IDeliveryZoneService {
   ): Promise<void> {
     const existing =
       await this.deliveryZoneRepositoryRead.findDeliveryZoneByKeys(
+        deliveryZone.storeId,
         deliveryZone.neighborhood,
         deliveryZone.cityKey,
       );

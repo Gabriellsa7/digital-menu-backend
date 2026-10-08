@@ -43,7 +43,7 @@ function aQuote(overrides: Partial<IParamsQuoteOrder> = {}): IParamsQuoteOrder {
 
 const storeService = { assertAcceptingOrders: jest.fn() };
 const customerService = { getCustomerById: jest.fn() };
-const deliveryZoneService = { getDeliveryZoneById: jest.fn() };
+const deliveryZoneService = { resolveDeliveryZone: jest.fn() };
 const productService = { findProductsByIds: jest.fn() };
 const optionGroupService = { findOptionGroupsByIds: jest.fn() };
 const couponService = { validateCouponForCustomer: jest.fn() };
@@ -61,7 +61,7 @@ beforeEach(() => {
   storeService.assertAcceptingOrders.mockResolvedValue(aStoreFixture());
 
   customerService.getCustomerById.mockResolvedValue(aCustomerFixture());
-  deliveryZoneService.getDeliveryZoneById.mockResolvedValue(
+  deliveryZoneService.resolveDeliveryZone.mockResolvedValue(
     aDeliveryZoneFixture(),
   );
   productService.findProductsByIds.mockResolvedValue([aProductFixture()]);
@@ -94,6 +94,11 @@ describe('When we quote a valid cart', () => {
       etaMinMinutes: 30,
     });
     expect(quote.deliveryAddress).not.toHaveProperty('label');
+    expect(deliveryZoneService.resolveDeliveryZone).toHaveBeenCalledWith(
+      'store-1',
+      'Vila Mariana',
+      'São Paulo',
+    );
   });
 
   it('should apply a coupon discount (CPN-R07)', async () => {
@@ -154,31 +159,9 @@ describe('When a quote breaks a rule', () => {
     ],
     ['there is no address', () => undefined, { addressId: undefined }, 'ADDRESS_REQUIRED'],
     [
-      'the address is not served (ORD-R03)',
+      'the store has no active zone for the address (ORD-R03)',
       () =>
-        customerService.getCustomerById.mockResolvedValue(
-          aCustomerFixture({
-            addresses: [
-              { ...aCustomerFixture().addresses[0], deliveryZoneId: undefined },
-            ],
-          }),
-        ),
-      {},
-      'ADDRESS_NOT_SERVED',
-    ],
-    [
-      'the zone was deactivated (ORD-R03)',
-      () =>
-        deliveryZoneService.getDeliveryZoneById.mockResolvedValue(
-          aDeliveryZoneFixture({ isActive: false }),
-        ),
-      {},
-      'ADDRESS_NOT_SERVED',
-    ],
-    [
-      'the zone was deleted (ORD-R03)',
-      () =>
-        deliveryZoneService.getDeliveryZoneById.mockRejectedValue(
+        deliveryZoneService.resolveDeliveryZone.mockRejectedValue(
           new NotFoundError(),
         ),
       {},

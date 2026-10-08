@@ -5,7 +5,7 @@ import {
   ICouponService,
   IParamsCouponData,
 } from '../../../domain/coupon/interfaces/coupon.service.interface';
-import { createAuthGuards } from '../middlewares/auth-guards';
+import { createAuthGuards, staffStoreId } from '../middlewares/auth-guards';
 import {
   toCouponResponse,
   toCouponValidationResponse,
@@ -47,6 +47,7 @@ export class CouponController implements IController {
     try {
       const { active } = req.query;
       const coupons = await this.couponService.listCoupons(
+        staffStoreId(req),
         active === undefined ? undefined : String(active) === 'true',
       );
       res.status(200).json(coupons.map(toCouponResponse));
@@ -62,7 +63,7 @@ export class CouponController implements IController {
   ): Promise<void> => {
     try {
       const coupon = await this.couponService.createCoupon(
-        this.couponData(req.body),
+        this.couponData(req),
       );
       res.status(201).json(toCouponResponse(coupon));
     } catch (error) {
@@ -78,7 +79,7 @@ export class CouponController implements IController {
     try {
       const coupon = await this.couponService.updateCoupon({
         id: req.params.id,
-        ...this.couponData(req.body),
+        ...this.couponData(req),
       });
       res.status(200).json(toCouponResponse(coupon));
     } catch (error) {
@@ -93,6 +94,7 @@ export class CouponController implements IController {
   ): Promise<void> => {
     try {
       const coupon = await this.couponService.setCouponActive(
+        staffStoreId(req),
         req.params.id,
         req.body.isActive,
       );
@@ -109,6 +111,7 @@ export class CouponController implements IController {
   ): Promise<void> => {
     try {
       const validation = await this.couponService.validateCouponForCustomer({
+        storeId: req.body.storeId,
         code: req.body.code,
         customerId: req.auth!.subjectId,
         subtotalInCents: req.body.subtotalInCents,
@@ -125,8 +128,10 @@ export class CouponController implements IController {
     return this.router;
   }
 
-  private couponData(body: Record<string, unknown>): IParamsCouponData {
+  private couponData(req: Request): IParamsCouponData {
+    const body: Record<string, unknown> = req.body;
     return {
+      storeId: staffStoreId(req),
       code: body.code as string,
       type: body.type as IParamsCouponData['type'],
       value: body.value as number,
@@ -138,6 +143,7 @@ export class CouponController implements IController {
       usagePerCustomer: (body.usagePerCustomer as number | undefined) ?? 1,
       firstOrderOnly: Boolean(body.firstOrderOnly),
       isActive: (body.isActive as boolean | undefined) ?? true,
+      isPublic: Boolean(body.isPublic),
     };
   }
 }

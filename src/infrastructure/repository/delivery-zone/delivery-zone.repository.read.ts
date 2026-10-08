@@ -15,20 +15,22 @@ export class DeliveryZoneRepositoryRead implements IDeliveryZoneRepositoryRead {
   }
 
   async findDeliveryZoneByKeys(
+    storeId: string,
     neighborhood: string,
     cityKey: string,
   ): Promise<IDeliveryZone | null> {
     return MdeliveryZone.findOne(
-      { neighborhood, cityKey },
+      { storeId, neighborhood, cityKey },
       HIDE_MONGO_INTERNAL_FIELDS,
     ).lean<IDeliveryZone>();
   }
 
-  async listDeliveryZones({
-    isActive,
-  }: IParamsListDeliveryZones): Promise<IDeliveryZone[]> {
+  async listDeliveryZones(
+    storeId: string,
+    { isActive }: IParamsListDeliveryZones,
+  ): Promise<IDeliveryZone[]> {
     return MdeliveryZone.find(
-      isActive === undefined ? {} : { isActive },
+      { storeId, ...(isActive !== undefined && { isActive }) },
       HIDE_MONGO_INTERNAL_FIELDS,
     )
       .sort({ cityKey: 1, neighborhood: 1 })

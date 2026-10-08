@@ -5,29 +5,35 @@ import {
   IDeliveryZoneService,
   IParamsDeliveryZoneData,
 } from '../../../domain/delivery-zone/interfaces/delivery-zone.service.interface';
-import { createAuthGuards } from '../middlewares/auth-guards';
+import { IStoreService } from '../../../domain/store/interfaces/store.service.interface';
+import { createAuthGuards, staffStoreId } from '../middlewares/auth-guards';
 import {
   toDeliveryZoneResponse,
   toPublicDeliveryZoneResponse,
 } from '../presenters/delivery-zone.presenter';
 
 type TIdParams = { id: string };
+type TSlugParams = { slug: string };
 
 export interface IParamsDeliveryZoneController {
   deliveryZoneService: IDeliveryZoneService;
+  storeService: IStoreService;
   tokenService: ITokenService;
 }
 
 export class DeliveryZoneController implements IController {
   router: Router;
   private readonly deliveryZoneService: IDeliveryZoneService;
+  private readonly storeService: IStoreService;
   private readonly tokenService: ITokenService;
 
   constructor({
     deliveryZoneService,
+    storeService,
     tokenService,
   }: IParamsDeliveryZoneController) {
     this.deliveryZoneService = deliveryZoneService;
+    this.storeService = storeService;
     this.tokenService = tokenService;
     this.router = Router();
     this.initRoutes();
@@ -35,8 +41,11 @@ export class DeliveryZoneController implements IController {
 
   initRoutes() {
     const { staff, owner } = createAuthGuards(this.tokenService);
-    this.router.get('/public/delivery-zones', this.listPublic);
-    this.router.get('/public/delivery-zones/resolve', this.resolve);
+    this.router.get('/public/stores/:slug/delivery-zones', this.listPublic);
+    this.router.get(
+      '/public/stores/:slug/delivery-zones/resolve',
+      this.resolve,
+    );
     this.router.get('/admin/delivery-zones', ...staff, this.listAdmin);
     this.router.post('/admin/delivery-zones', ...owner, this.create);
     this.router.put('/admin/delivery-zones/:id', ...owner, this.update);
@@ -44,12 +53,15 @@ export class DeliveryZoneController implements IController {
   }
 
   listPublic = async (
-    _req: Request,
+    req: Request<TSlugParams>,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const zones = await this.deliveryZoneService.listDeliveryZones(true);
+      const zones = await this.deliveryZoneService.listDeliveryZones(
+        await this.publishedStoreId(req.params.slug),
+        true,
+      );
       res.status(200).json(zones.map(toPublicDeliveryZoneResponse));
     } catch (error) {
       next(error);
@@ -57,12 +69,13 @@ export class DeliveryZoneController implements IController {
   };
 
   resolve = async (
-    req: Request,
+    req: Request<TSlugParams>,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
       const zone = await this.deliveryZoneService.resolveDeliveryZone(
+        await this.publishedStoreId(req.params.slug),
         String(req.query.neighborhood),
         String(req.query.city),
       );
@@ -73,12 +86,15 @@ export class DeliveryZoneController implements IController {
   };
 
   listAdmin = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const zones = await this.deliveryZoneService.listDeliveryZones(false);
+      const zones = await this.deliveryZoneService.listDeliveryZones(
+        staffStoreId(req),
+        false,
+      );
       res.status(200).json(zones.map(toDeliveryZoneResponse));
     } catch (error) {
       next(error);
@@ -92,6 +108,7 @@ export class DeliveryZoneController implements IController {
   ): Promise<void> => {
     try {
       const zone = await this.deliveryZoneService.createDeliveryZone({
+        storeId: staffStoreId(req),
         ...this.zoneData(req.body),
         isActive: req.body.isActive ?? true,
       });
@@ -108,6 +125,7 @@ export class DeliveryZoneController implements IController {
   ): Promise<void> => {
     try {
       const zone = await this.deliveryZoneService.updateDeliveryZone({
+        storeId: staffStoreId(req),
         id: req.params.id,
         ...this.zoneData(req.body),
         isActive: req.body.isActive,
@@ -124,7 +142,10 @@ export class DeliveryZoneController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      await this.deliveryZoneService.deleteDeliveryZone(req.params.id);
+      await this.deliveryZoneService.deleteDeliveryZone(
+        staffStoreId(req),
+        req.params.id,
+      );
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -135,9 +156,14 @@ export class DeliveryZoneController implements IController {
     return this.router;
   }
 
+  private async publishedStoreId(slug: string): Promise<string> {
+    const { store } = await this.storeService.getPublishedStoreBySlug(slug);
+    return store.id;
+  }
+
   private zoneData(
     body: Record<string, unknown>,
-  ): Omit<IParamsDeliveryZoneData, 'isActive'> {
+  ): Omit<IParamsDeliveryZoneData, 'isActive' | 'storeId'> {
     return {
       displayName: body.name as string,
       city: body.city as string,

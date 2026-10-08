@@ -4,6 +4,7 @@ import { IDeliveryZone } from './interfaces/delivery-zone.interface';
 
 export class DeliveryZone implements IDeliveryZone {
   public readonly id: string;
+  public readonly storeId: string;
   public readonly neighborhood: string;
   public readonly displayName: string;
   public readonly city: string;
@@ -29,6 +30,7 @@ export class DeliveryZone implements IDeliveryZone {
       );
     }
     this.id = props.id;
+    this.storeId = props.storeId;
     this.displayName = props.displayName.trim();
     this.neighborhood = normalizeText(props.displayName);
     this.city = props.city.trim();

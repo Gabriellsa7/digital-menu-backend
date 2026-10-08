@@ -32,6 +32,7 @@ export async function setupCheckout() {
   await storeService.setManualStatus(store.id, EManualStatus.FORCED_OPEN);
 
   const zone = await DeliveryZoneServiceFactory.create().createDeliveryZone({
+    storeId: store.id,
     displayName: 'Vila Mariana',
     city: 'São Paulo',
     feeInCents: 790,

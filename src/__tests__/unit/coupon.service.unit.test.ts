@@ -12,6 +12,7 @@ import { FixedClock } from '../helpers/fixed.clock';
 
 const clock = new FixedClock();
 const COUPON_DATA = {
+  storeId: 'store-1',
   code: 'desconto15',
   type: ECouponType.PERCENTAGE,
   value: 15,
@@ -22,6 +23,7 @@ const COUPON_DATA = {
   usagePerCustomer: 1,
   firstOrderOnly: false,
   isActive: true,
+  isPublic: false,
 };
 
 function aCoupon(overrides: Partial<ICoupon> = {}): ICoupon {
@@ -109,6 +111,7 @@ describe('When the owner updates a coupon', () => {
 
 describe('When a customer validates a coupon', () => {
   const PARAMS = {
+    storeId: 'store-1',
     code: 'desconto15',
     customerId: 'customer-1',
     subtotalInCents: 4000,
@@ -124,6 +127,7 @@ describe('When a customer validates a coupon', () => {
 
     expect(discountInCents).toBe(600);
     expect(couponRepositoryRead.findCouponByCode).toHaveBeenCalledWith(
+      'store-1',
       'DESCONTO15',
     );
   });

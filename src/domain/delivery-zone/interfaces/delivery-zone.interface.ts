@@ -1,5 +1,6 @@
 export interface IDeliveryZone {
   id: string;
+  storeId: string;
   neighborhood: string;
   displayName: string;
   city: string;

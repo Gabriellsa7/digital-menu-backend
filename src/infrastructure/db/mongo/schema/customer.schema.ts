@@ -20,7 +20,6 @@ const addressSchema = new mongoose.Schema<IAddress>(
     city: { type: String, required: true },
     state: { type: String, required: true },
     reference: { type: String },
-    deliveryZoneId: { type: String },
     isDefault: { type: Boolean, required: true },
   },
   { _id: false },

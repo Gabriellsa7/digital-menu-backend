@@ -6,6 +6,7 @@ export enum ECouponType {
 
 export interface ICoupon {
   id: string;
+  storeId: string;
   code: string;
   type: ECouponType;
   value: number;
@@ -18,6 +19,7 @@ export interface ICoupon {
   usedCount: number;
   firstOrderOnly: boolean;
   isActive: boolean;
+  isPublic: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

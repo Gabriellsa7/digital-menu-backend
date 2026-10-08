@@ -54,7 +54,7 @@ export interface ICustomerService {
   updateCustomerProfile(
     params: IParamsUpdateCustomerProfile,
   ): Promise<ICustomer>;
-  listAddresses(customerId: string): Promise<IAddress[]>;
+  listAddresses(customerId: string, storeId?: string): Promise<IAddress[]>;
   addAddress(params: IParamsAddAddress): Promise<IAddress>;
   updateAddress(params: IParamsUpdateAddress): Promise<IAddress>;
   removeAddress(customerId: string, addressId: string): Promise<void>;

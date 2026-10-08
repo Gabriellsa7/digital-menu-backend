@@ -8,6 +8,7 @@ import { FixedClock } from '../helpers/fixed.clock';
 
 const clock = new FixedClock();
 const ZONE_DATA = {
+  storeId: 'store-1',
   displayName: 'Vila Mariana',
   city: 'São Paulo',
   feeInCents: 590,
@@ -102,6 +103,7 @@ describe('When the owner updates a delivery zone', () => {
 
     await expect(
       deliveryZoneService.updateDeliveryZone({
+        storeId: 'store-1',
         id: 'zone-1',
         etaMaxMinutes: 20,
       }),
@@ -115,6 +117,7 @@ describe('When the owner updates a delivery zone', () => {
     );
 
     const zone = await deliveryZoneService.updateDeliveryZone({
+      storeId: 'store-1',
       id: 'zone-1',
       feeInCents: 790,
     });
@@ -126,18 +129,27 @@ describe('When the owner updates a delivery zone', () => {
     deliveryZoneRepositoryRead.findDeliveryZoneById.mockResolvedValue(null);
 
     await expect(
-      deliveryZoneService.updateDeliveryZone({ id: 'missing', feeInCents: 1 }),
+      deliveryZoneService.updateDeliveryZone({
+        storeId: 'store-1',
+        id: 'missing',
+        feeInCents: 1,
+      }),
     ).rejects.toThrow(NotFoundError);
   });
 });
 
 describe('When we delete a delivery zone', () => {
-  it('should throw NotFoundError when nothing was deleted', async () => {
-    deliveryZoneRepositoryWrite.deleteDeliveryZoneById.mockResolvedValue(false);
+  it('should throw NotFoundError for a zone of another store (TEN-R04)', async () => {
+    deliveryZoneRepositoryRead.findDeliveryZoneById.mockResolvedValue(
+      aZone({ storeId: 'store-2' }),
+    );
 
     await expect(
-      deliveryZoneService.deleteDeliveryZone('missing'),
+      deliveryZoneService.deleteDeliveryZone('store-1', 'zone-1'),
     ).rejects.toThrow(NotFoundError);
+    expect(
+      deliveryZoneRepositoryWrite.deleteDeliveryZoneById,
+    ).not.toHaveBeenCalled();
   });
 });
 
@@ -148,11 +160,15 @@ describe('When we resolve an address to a delivery zone (CUS-R03)', () => {
     );
 
     await expect(
-      deliveryZoneService.resolveDeliveryZoneId('vila mariána', 'SAO PAULO'),
+      deliveryZoneService.resolveDeliveryZoneId(
+        'store-1',
+        'vila mariána',
+        'SAO PAULO',
+      ),
     ).resolves.toBe('zone-1');
     expect(
       deliveryZoneRepositoryRead.findDeliveryZoneByKeys,
-    ).toHaveBeenCalledWith('vila mariana', 'sao paulo');
+    ).toHaveBeenCalledWith('store-1', 'vila mariana', 'sao paulo');
   });
 
   it('should ignore inactive zones', async () => {
@@ -161,18 +177,27 @@ describe('When we resolve an address to a delivery zone (CUS-R03)', () => {
     );
 
     await expect(
-      deliveryZoneService.resolveDeliveryZoneId('Vila Mariana', 'São Paulo'),
+      deliveryZoneService.resolveDeliveryZoneId(
+        'store-1',
+        'Vila Mariana',
+        'São Paulo',
+      ),
     ).resolves.toBeUndefined();
     await expect(
-      deliveryZoneService.resolveDeliveryZone('Vila Mariana', 'São Paulo'),
+      deliveryZoneService.resolveDeliveryZone(
+        'store-1',
+        'Vila Mariana',
+        'São Paulo',
+      ),
     ).rejects.toThrow(NotFoundError);
   });
 
   it('should list only active zones for the public', async () => {
-    await deliveryZoneService.listDeliveryZones(true);
+    await deliveryZoneService.listDeliveryZones('store-1', true);
 
-    expect(deliveryZoneRepositoryRead.listDeliveryZones).toHaveBeenCalledWith({
-      isActive: true,
-    });
+    expect(deliveryZoneRepositoryRead.listDeliveryZones).toHaveBeenCalledWith(
+      'store-1',
+      { isActive: true },
+    );
   });
 });

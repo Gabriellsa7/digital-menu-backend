@@ -258,8 +258,14 @@ paths:
         - Customer
       summary: List saved addresses
       operationId: listCustomerAddresses
+      description: With `storeId`, each address carries the `deliveryZoneId` of that store that serves it (CUS-R03). Zones are never stored on the address.
       security:
         - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: query
+          schema:
+            type: string
       responses:
         '200':
           description: The addresses
@@ -771,11 +777,13 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/delivery-zones:
+  /public/stores/{slug}/delivery-zones:
+    parameters:
+      - $ref: '#/components/parameters/StoreSlug'
     get:
       tags:
         - Delivery zones
-      summary: List the active delivery zones
+      summary: List the active delivery zones of a published store
       operationId: listPublicDeliveryZones
       responses:
         '200':
@@ -786,14 +794,18 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PublicDeliveryZone'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /public/delivery-zones/resolve:
+  /public/stores/{slug}/delivery-zones/resolve:
+    parameters:
+      - $ref: '#/components/parameters/StoreSlug'
     get:
       tags:
         - Delivery zones
-      summary: Find the zone that serves a neighborhood
+      summary: Find the zone of a store that serves a neighborhood
       operationId: resolveDeliveryZone
       description: Matching ignores accents, casing and extra spaces (CUS-R03).
       parameters:
@@ -3250,6 +3262,7 @@ components:
         - usedCount
         - firstOrderOnly
         - isActive
+        - isPublic
         - createdAt
       properties:
         id:
@@ -3281,6 +3294,9 @@ components:
           type: boolean
         isActive:
           type: boolean
+        isPublic:
+          type: boolean
+          description: Shown on the store home (HOM-R05)
         createdAt:
           type: string
           format: date-time
@@ -3325,14 +3341,20 @@ components:
           type: boolean
         isActive:
           type: boolean
+        isPublic:
+          type: boolean
     CouponValidationRequest:
       type: object
       additionalProperties: false
       required:
+        - storeId
         - code
         - subtotalInCents
         - fulfillmentType
       properties:
+        storeId:
+          type: string
+          minLength: 1
         code:
           type: string
           minLength: 1

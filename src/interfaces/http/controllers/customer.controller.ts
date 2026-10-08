@@ -117,6 +117,7 @@ export class CustomerController implements IController {
     try {
       const addresses = await this.customerService.listAddresses(
         this.customerId(req),
+        typeof req.query.storeId === 'string' ? req.query.storeId : undefined,
       );
       res.status(200).json(addresses.map(toAddressResponse));
     } catch (error) {
