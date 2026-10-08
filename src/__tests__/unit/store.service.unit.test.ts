@@ -84,11 +84,11 @@ beforeEach(() => {
 });
 
 describe('When we create a store (TEN-R01)', () => {
-  it('should derive the slug from the name and start unpublished', async () => {
-    const created = await storeService.createStore({ name: 'Casa Brasa' });
+  it('should derive a free slug from the name and start unpublished', async () => {
+    const created = await storeService.createStore({ name: 'Digital Menu' });
 
     expect(created).toMatchObject({
-      slug: 'casa-brasa',
+      slug: 'digital-menu-2',
       isPublished: false,
       isActive: true,
       manualStatus: EManualStatus.AUTO,
@@ -96,6 +96,18 @@ describe('When we create a store (TEN-R01)', () => {
       deliveryEnabled: false,
       pickupEnabled: true,
     });
+  });
+
+  it('should reject a slug that is already in use', async () => {
+    await expect(
+      storeService.createStore({ name: 'Other', slug: 'digital-menu' }),
+    ).rejects.toMatchObject({ code: 'SLUG_TAKEN' });
+  });
+
+  it('should reject a reserved slug', async () => {
+    await expect(
+      storeService.createStore({ name: 'Other', slug: 'checkout' }),
+    ).rejects.toMatchObject({ code: 'SLUG_RESERVED' });
   });
 
   it('should reuse the first store as the default store', async () => {
@@ -111,6 +123,33 @@ describe('When we create a store (TEN-R01)', () => {
     const store = await storeService.ensureDefaultStore();
 
     expect(store).toMatchObject({ slug: 'digital-menu', isPublished: true });
+  });
+});
+
+describe('When anyone reads a store by slug (TEN-R06)', () => {
+  it('should find a published store', async () => {
+    stored = aStore({ isPublished: true });
+
+    const { store } = await storeService.getPublishedStoreBySlug('digital-menu');
+
+    expect(store.id).toBe(STORE_ID);
+  });
+
+  it.each([
+    ['unpublished', { isPublished: false }],
+    ['inactive', { isPublished: true, isActive: false }],
+  ])('should hide an %s store as STORE_NOT_FOUND', async (_case, flags) => {
+    stored = aStore(flags);
+
+    await expect(
+      storeService.getPublishedStoreBySlug('digital-menu'),
+    ).rejects.toMatchObject({ status: 404, code: 'STORE_NOT_FOUND' });
+  });
+
+  it('should answer STORE_NOT_FOUND for an unknown slug', async () => {
+    await expect(
+      storeService.getPublishedStoreBySlug('nope'),
+    ).rejects.toMatchObject({ code: 'STORE_NOT_FOUND' });
   });
 });
 
@@ -222,6 +261,22 @@ describe('When the owner updates the store', () => {
     await expect(
       storeService.updateStore(STORE_ID, { deliveryEnabled: false }),
     ).rejects.toMatchObject({ code: 'NO_FULFILLMENT_ENABLED' });
+  });
+
+  it('should change the slug when it is free (TEN-R02)', async () => {
+    const store = await storeService.updateStore(STORE_ID, {
+      slug: 'casa-brasa',
+    });
+
+    expect(store.slug).toBe('casa-brasa');
+  });
+
+  it('should reject a slug used by another store (TEN-R01)', async () => {
+    others = [aStore({ id: 'store-2', slug: 'casa-brasa' })];
+
+    await expect(
+      storeService.updateStore(STORE_ID, { slug: 'casa-brasa' }),
+    ).rejects.toMatchObject({ status: 409, code: 'SLUG_TAKEN' });
   });
 
   it('should reject an unknown timezone', async () => {

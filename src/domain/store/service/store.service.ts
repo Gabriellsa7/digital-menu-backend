@@ -9,6 +9,7 @@ import {
   IStorageProvider,
 } from '../../common/storage.provider.interface';
 import { BusinessRuleError } from '../../errors/business-rule.error';
+import { ConflictError } from '../../errors/conflict.error';
 import { NotFoundError } from '../../errors/not-found.error';
 import { IStoreEventPublisher } from '../events/store.event.publisher';
 import {
@@ -29,7 +30,11 @@ import {
   assertValidOpeningHours,
   nextBoundaryAfter,
 } from '../policies/opening-hours.policy';
-import { slugify } from '../policies/slug.policy';
+import {
+  assertValidSlug,
+  findAvailableSlug,
+  slugify,
+} from '../policies/slug.policy';
 import { IStoreRepositoryRead } from '../repository/store.repository.read';
 import {
   IParamsUpdateStoreFields,
@@ -68,7 +73,10 @@ export class StoreService implements IStoreService {
     isPublished = false,
     ...settings
   }: IParamsCreateStore): Promise<IStore> {
-    const storeSlug = slug ?? slugify(name);
+    const storeSlug = slug ?? (await this.findFreeSlug(name));
+    if (slug !== undefined) {
+      await this.assertSlugAvailable(slug);
+    }
     const defaults = Store.withDefaults(randomUUID(), this.clock.now(), {
       name: name.trim(),
       slug: storeSlug,
@@ -110,6 +118,15 @@ export class StoreService implements IStoreService {
   }
 
   @ErrorHandler()
+  async getPublishedStoreBySlug(slug: string): Promise<IStoreWithStatus> {
+    const store = await this.storeRepositoryRead.findStoreBySlug(slug);
+    if (!store || !store.isActive || !store.isPublished) {
+      throw new NotFoundError('Store not found', 'STORE_NOT_FOUND');
+    }
+    return this.withStatus(store);
+  }
+
+  @ErrorHandler()
   async listActiveStores(): Promise<IStore[]> {
     return this.storeRepositoryRead.listActiveStores();
   }
@@ -127,6 +144,10 @@ export class StoreService implements IStoreService {
     if (params.timezone !== undefined) {
       this.assertValidTimezone(params.timezone);
     }
+    if (params.slug !== undefined && params.slug !== store.slug) {
+      await this.assertSlugAvailable(params.slug);
+    }
+
     return this.updateStoreFields(storeId, { set: this.definedFields(params) });
   }
 
@@ -246,6 +267,19 @@ export class StoreService implements IStoreService {
     return Object.fromEntries(
       Object.entries(params).filter(([, value]) => value !== undefined),
     ) as Partial<T>;
+  }
+
+  private async findFreeSlug(name: string): Promise<string> {
+    return findAvailableSlug(slugify(name), async (candidate) =>
+      Boolean(await this.storeRepositoryRead.findStoreBySlug(candidate)),
+    );
+  }
+
+  private async assertSlugAvailable(slug: string): Promise<void> {
+    assertValidSlug(slug);
+    if (await this.storeRepositoryRead.findStoreBySlug(slug)) {
+      throw new ConflictError('Slug is already in use', 'SLUG_TAKEN');
+    }
   }
 
   private async updateStoreFields(
