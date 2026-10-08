@@ -1,3 +1,7 @@
+import {
+  IBestSeller,
+  IBestSellersReader,
+} from '../../../domain/menu/interfaces/best-sellers.reader.interface';
 import { RootFilterQuery } from 'mongoose';
 import {
   IPaginatedResult,
@@ -24,7 +28,7 @@ function escapeRegex(value: string): string {
 }
 
 export class OrderRepositoryRead
-  implements IOrderRepositoryRead, ICustomerCouponUsage
+  implements IOrderRepositoryRead, ICustomerCouponUsage, IBestSellersReader
 {
   async findOrderById(id: string): Promise<IOrder | null> {
     return Morder.findOne({ id }, HIDE_MONGO_INTERNAL_FIELDS).lean<IOrder>();
@@ -126,6 +130,32 @@ export class OrderRepositoryRead
       status: EOrderStatus.COMPLETED,
     });
     return order !== null;
+  }
+
+  async listBestSellers(
+    storeId: string,
+    since: Date,
+    limit: number,
+  ): Promise<IBestSeller[]> {
+    return Morder.aggregate<IBestSeller>([
+      {
+        $match: {
+          storeId,
+          status: EOrderStatus.COMPLETED,
+          createdAt: { $gte: since },
+        },
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.productId',
+          soldCount: { $sum: '$items.quantity' },
+        },
+      },
+      { $sort: { soldCount: -1, _id: 1 } },
+      { $limit: limit },
+      { $project: { _id: 0, productId: '$_id', soldCount: 1 } },
+    ]);
   }
 
   private async paginate(
