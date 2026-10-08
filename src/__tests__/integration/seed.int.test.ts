@@ -31,7 +31,7 @@ async function countAll() {
 }
 
 describe('When we seed the demo stores', () => {
-  it('should create two published stores and a draft, stable when run twice', async () => {
+  it('should create three published stores and a draft, stable when run twice', async () => {
     await resetDatabase();
 
     await runSeed();
@@ -44,13 +44,13 @@ describe('When we seed the demo stores', () => {
     const directory = await supertest(app.app).get('/places');
 
     expect(first).toEqual({
-      store: 3,
-      categories: 9,
-      optionGroups: 6,
-      products: 29,
-      zones: 11,
-      coupons: 4,
-      staffUsers: 4,
+      store: 4,
+      categories: 13,
+      optionGroups: 8,
+      products: 39,
+      zones: 15,
+      coupons: 5,
+      staffUsers: 5,
       orders: 6,
     });
     expect(second).toEqual(first);
@@ -60,7 +60,7 @@ describe('When we seed the demo stores', () => {
     expect(manualStatuses).toEqual(['AUTO']);
     expect(
       directory.body.items.map(({ slug }: { slug: string }) => slug),
-    ).toEqual(['forno-da-vila', 'smash-bros-burger']);
+    ).toEqual(['forno-da-vila', 'majin-meu', 'smash-bros-burger']);
     expect(home.body.featured).toHaveLength(3);
     expect(home.body.promotions).toHaveLength(2);
     expect(home.body.bestSellers).toHaveLength(3);

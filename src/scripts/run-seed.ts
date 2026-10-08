@@ -45,6 +45,16 @@ import {
   PIZZERIA_ZONES_SEED,
   pizzeriaCouponsSeed,
 } from './seed-data/pizzeria';
+import {
+  MAJIN_MEU_CATALOG_SEED,
+  MAJIN_MEU_IMAGES_SEED,
+  MAJIN_MEU_OPENING_HOURS_SEED,
+  MAJIN_MEU_OPTION_GROUPS_SEED,
+  MAJIN_MEU_STAFF_USERS_SEED,
+  MAJIN_MEU_STORE_SEED,
+  MAJIN_MEU_ZONES_SEED,
+  majinMeuCouponsSeed,
+} from './seed-data/majin-meu';
 import { OPENING_HOURS_SEED, STORE_SEED } from './seed-data/store';
 import { DEMO_CUSTOMER_SEED, STAFF_USERS_SEED } from './seed-data/users';
 
@@ -55,6 +65,7 @@ const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 interface IStoreSeed {
   store: IParamsCreateStore & { slug: string };
   openingHours: IOpeningHour[];
+  images?: Pick<IStore, 'logoUrl' | 'bannerUrl'>;
   optionGroups: IOptionGroupSeed[];
   catalog: ICategorySeed[];
   zones: [string, number, number, number][];
@@ -94,6 +105,18 @@ const STORES_SEED: IStoreSeed[] = [
     featured: ['Margherita'],
   },
   {
+    store: { ...MAJIN_MEU_STORE_SEED, isPublished: true },
+    openingHours: MAJIN_MEU_OPENING_HOURS_SEED,
+    images: MAJIN_MEU_IMAGES_SEED,
+    optionGroups: MAJIN_MEU_OPTION_GROUPS_SEED,
+    catalog: MAJIN_MEU_CATALOG_SEED,
+    zones: MAJIN_MEU_ZONES_SEED,
+    coupons: majinMeuCouponsSeed,
+    staffUsers: MAJIN_MEU_STAFF_USERS_SEED,
+    featured: ['Lámen tradicional', 'Gyoza'],
+    promotions: [['Gyudon', 3190]],
+  },
+  {
     store: DRAFT_STORE_SEED,
     openingHours: [],
     optionGroups: [],
@@ -113,10 +136,17 @@ export async function resetDatabase(): Promise<void> {
   Logger.warn('Database reset by the seed', { eventName: 'seed.reset' });
 }
 
-async function seedStore({ store, openingHours }: IStoreSeed): Promise<IStore> {
+async function seedStore({
+  store,
+  openingHours,
+  images,
+}: IStoreSeed): Promise<IStore> {
   const storeService = StoreServiceFactory.create();
   const existing = await Mstore.findOne({ slug: store.slug }).lean<IStore>();
   const saved = existing ?? (await storeService.createStore(store));
+  if (images) {
+    await Mstore.updateOne({ slug: store.slug }, { $set: images });
+  }
   return storeService.setOpeningHours(saved.id, openingHours);
 }
 
