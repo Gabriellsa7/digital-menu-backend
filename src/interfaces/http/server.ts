@@ -11,6 +11,7 @@ import { IController } from './controllers/controller.interface';
 import mongoose from 'mongoose';
 import * as OpenApiValidator from 'express-openapi-validator';
 import helmet from 'helmet';
+import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { HttpError } from 'express-openapi-validator/dist/framework/types';
 import { DomainError } from '../../domain/errors/domain.error';
@@ -27,6 +28,8 @@ export class Server {
 
   private readonly timeoutMilliseconds?: number;
 
+  private readonly corsOrigins: string[];
+
   private readonly defaultMiddlewares = [
     express.json({ limit: '3mb' }),
     express.urlencoded({ limit: '3mb', extended: true }),
@@ -41,18 +44,21 @@ export class Server {
     apiSpecLocation?: string;
     databaseURI?: string;
     timeoutMilliseconds?: number;
+    corsOrigins?: string[];
   }) {
     this.app = express();
     this.port = appInit.port;
     this.apiSpecLocation = appInit.apiSpecLocation;
     this.DATABASE_URI = appInit.databaseURI;
     this.timeoutMilliseconds = appInit.timeoutMilliseconds;
+    this.corsOrigins = appInit.corsOrigins || [];
 
     this.app.get('/health', (req: Request, res: Response) => {
       res.status(200).json({ status: 'OK' });
     });
 
     this.middlewares([
+      cors({ origin: this.corsOrigins, credentials: true }),
       ...this.defaultMiddlewares,
       ...(appInit.middlewaresToStart || []),
     ]);

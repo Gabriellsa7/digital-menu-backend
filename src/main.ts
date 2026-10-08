@@ -54,6 +54,7 @@ const app = new Server({
   ],
   databaseURI: env.databaseUri,
   apiSpecLocation: OPEN_API_SPEC_FILE_LOCATION,
+  corsOrigins: env.corsOrigins,
 });
 
 async function start() {
