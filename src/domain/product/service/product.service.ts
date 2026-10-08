@@ -9,7 +9,9 @@ import {
   IImageFile,
   IStorageProvider,
 } from '../../common/storage.provider.interface';
+import { BusinessRuleError } from '../../errors/business-rule.error';
 import { NotFoundError } from '../../errors/not-found.error';
+import { assertValidPromotion } from '../product-pricing';
 import { IOptionGroup } from '../../option-group/interfaces/option-group.interface';
 import { IOptionGroupService } from '../../option-group/interfaces/option-group.service.interface';
 import { IStoreEventPublisher } from '../../store/events/store.event.publisher';
@@ -18,6 +20,8 @@ import {
   IParamsProductData,
   IParamsProductService,
   IParamsSetProductAvailability,
+  IParamsSetProductFeatured,
+  IParamsSetProductPromotion,
   IParamsUpdateProduct,
   IProductService,
 } from '../interfaces/product.service.interface';
@@ -32,6 +36,7 @@ import {
 } from '../repository/product.repository.write';
 
 const PRODUCT_IMAGES_FOLDER = 'digital-menu/stores';
+const MAX_FEATURED_PRODUCTS = 5;
 
 export class ProductService implements IProductService {
   private productRepositoryRead: IProductRepositoryRead;
@@ -98,6 +103,7 @@ export class ProductService implements IProductService {
     const product = new Product({
       ...params,
       id: randomUUID(),
+      isFeatured: false,
       position: await this.nextPositionIn(params.categoryId),
       createdAt: now,
       updatedAt: now,
@@ -138,7 +144,12 @@ export class ProductService implements IProductService {
         position: product.position,
         ...(servesPeople !== undefined && { servesPeople }),
       },
-      ...(servesPeople === undefined && { unset: ['servesPeople'] }),
+      unset: [
+        ...(servesPeople === undefined ? (['servesPeople'] as const) : []),
+        ...(this.isPromotionAboveNewPrice(current, product.priceInCents)
+          ? (['promotion'] as const)
+          : []),
+      ],
     });
   }
 
@@ -219,6 +230,57 @@ export class ProductService implements IProductService {
     });
     await this.deleteImageIfAny(product.imagePublicId);
     return updated;
+  }
+
+  @ErrorHandler()
+  async setProductPromotion({
+    storeId,
+    id,
+    promotion,
+  }: IParamsSetProductPromotion): Promise<IProduct> {
+    const product = await this.getProductById(storeId, id);
+    assertValidPromotion(product.priceInCents, promotion);
+
+    return this.updateProductFields(id, { set: { promotion } });
+  }
+
+  @ErrorHandler()
+  async removeProductPromotion(storeId: string, id: string): Promise<IProduct> {
+    await this.getProductById(storeId, id);
+
+    return this.updateProductFields(id, { unset: ['promotion'] });
+  }
+
+  @ErrorHandler()
+  async setProductFeatured({
+    storeId,
+    id,
+    isFeatured,
+  }: IParamsSetProductFeatured): Promise<IProduct> {
+    const product = await this.getProductById(storeId, id);
+    if (isFeatured && !product.isFeatured) {
+      const featured =
+        await this.productRepositoryRead.countFeaturedProducts(storeId);
+      if (featured >= MAX_FEATURED_PRODUCTS) {
+        throw new BusinessRuleError(
+          `A store can feature at most ${MAX_FEATURED_PRODUCTS} products`,
+          'FEATURED_LIMIT',
+          { limit: MAX_FEATURED_PRODUCTS },
+        );
+      }
+    }
+
+    return this.updateProductFields(id, { set: { isFeatured } });
+  }
+
+  private isPromotionAboveNewPrice(
+    current: IProduct,
+    priceInCents: number,
+  ): boolean {
+    return (
+      current.promotion !== undefined &&
+      current.promotion.priceInCents >= priceInCents
+    );
   }
 
   private async deleteImageIfAny(publicId?: string): Promise<void> {

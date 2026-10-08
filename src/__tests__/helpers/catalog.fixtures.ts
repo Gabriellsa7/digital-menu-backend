@@ -78,6 +78,7 @@ export function aProductFixture(overrides: Partial<IProduct> = {}): IProduct {
   return {
     id: 'smash',
     storeId: 'store-1',
+    isFeatured: false,
     categoryId: 'burgers',
     name: 'Smash',
     description: '',

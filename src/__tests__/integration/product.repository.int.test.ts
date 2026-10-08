@@ -14,6 +14,7 @@ function createProduct(overrides: Partial<IProduct> = {}) {
   return productRepositoryWrite.createProduct({
     id: randomUUID(),
     storeId: 'store-1',
+    isFeatured: false,
     categoryId: 'burgers',
     name: 'Smash',
     description: '',

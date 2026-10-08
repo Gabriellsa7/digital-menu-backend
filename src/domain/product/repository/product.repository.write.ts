@@ -3,7 +3,8 @@ import { IProduct } from '../interfaces/product.interface';
 export type TOptionalProductField =
   | 'imageUrl'
   | 'imagePublicId'
-  | 'servesPeople';
+  | 'servesPeople'
+  | 'promotion';
 
 export interface IParamsUpdateProductFields {
   set?: Partial<Omit<IProduct, 'id' | 'createdAt' | 'updatedAt'>>;

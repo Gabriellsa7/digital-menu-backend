@@ -25,6 +25,7 @@ function aProduct(overrides: Partial<IProduct> = {}): IProduct {
   return {
     ...PRODUCT_DATA,
     id: 'product-1',
+    isFeatured: false,
     position: 0,
     createdAt: clock.now(),
     updatedAt: clock.now(),
@@ -63,6 +64,7 @@ beforeEach(() => {
     listProductsInCategory: jest.fn().mockResolvedValue([]),
     listActiveProducts: jest.fn(),
     findMaxPositionInCategory: jest.fn().mockResolvedValue(-1),
+    countFeaturedProducts: jest.fn().mockResolvedValue(0),
   };
   productRepositoryWrite = {
     createProduct: jest.fn(async (product) => ({ ...product })),
@@ -317,5 +319,42 @@ describe('When we change the product image (PRD-R03, R04)', () => {
     await productService.deleteProduct('store-1', 'product-1');
 
     expect(storageProvider.images.size).toBe(0);
+  });
+});
+
+describe('When staff features a product (HOM-R01)', () => {
+  it('should refuse a sixth featured product with FEATURED_LIMIT', async () => {
+    productRepositoryRead.countFeaturedProducts.mockResolvedValue(5);
+
+    await expect(
+      productService.setProductFeatured({
+        storeId: 'store-1',
+        id: 'product-1',
+        isFeatured: true,
+      }),
+    ).rejects.toMatchObject({ code: 'FEATURED_LIMIT' });
+  });
+
+  it('should drop the promotion when the price goes below it (PRM-R01)', async () => {
+    productRepositoryRead.findProductById.mockResolvedValue(
+      aProduct({
+        promotion: {
+          priceInCents: 3000,
+          startsAt: clock.now(),
+          endsAt: clock.now(),
+        },
+      }),
+    );
+
+    await productService.updateProduct({
+      ...PRODUCT_DATA,
+      id: 'product-1',
+      priceInCents: 2900,
+    });
+
+    expect(productRepositoryWrite.updateProductById).toHaveBeenCalledWith(
+      'product-1',
+      expect.objectContaining({ unset: ['servesPeople', 'promotion'] }),
+    );
   });
 });

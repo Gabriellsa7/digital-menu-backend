@@ -27,6 +27,7 @@ function aProduct(id: string, overrides: Partial<IProduct> = {}): IProduct {
   return {
     id,
     storeId: 'store-1',
+    isFeatured: false,
     categoryId: 'burgers',
     name: id,
     description: '',

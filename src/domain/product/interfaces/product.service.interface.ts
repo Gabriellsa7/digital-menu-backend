@@ -12,7 +12,7 @@ import {
 } from '../repository/product.repository.read';
 import { IStoreEventPublisher } from '../../store/events/store.event.publisher';
 import { IProductRepositoryWrite } from '../repository/product.repository.write';
-import { IProduct } from './product.interface';
+import { IProduct, IProductPromotion } from './product.interface';
 
 export interface IParamsProductData {
   storeId: string;
@@ -34,6 +34,18 @@ export interface IParamsSetProductAvailability {
   storeId: string;
   id: string;
   isAvailable: boolean;
+}
+
+export interface IParamsSetProductPromotion {
+  storeId: string;
+  id: string;
+  promotion: IProductPromotion;
+}
+
+export interface IParamsSetProductFeatured {
+  storeId: string;
+  id: string;
+  isFeatured: boolean;
 }
 
 export interface IParamsProductService {
@@ -68,4 +80,7 @@ export interface IProductService {
     file?: IImageFile,
   ): Promise<IProduct>;
   removeProductImage(storeId: string, id: string): Promise<IProduct>;
+  setProductPromotion(params: IParamsSetProductPromotion): Promise<IProduct>;
+  removeProductPromotion(storeId: string, id: string): Promise<IProduct>;
+  setProductFeatured(params: IParamsSetProductFeatured): Promise<IProduct>;
 }
