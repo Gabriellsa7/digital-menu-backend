@@ -96,3 +96,34 @@ describe('When we look up orders', () => {
     expect(active).toHaveLength(1);
   });
 });
+
+describe('When we rank the best sellers of a store (HOM-R03)', () => {
+  it('should sum completed items since the date, per store', async () => {
+    const item = (productId: string, quantity: number) => ({
+      ...anOrderFixture().items[0],
+      productId,
+      quantity,
+    });
+    const completed = (items: ReturnType<typeof item>[], storeId = 'store-1') =>
+      orderRepositoryWrite.createOrder(
+        anOrderFixture({ storeId, items, status: EOrderStatus.COMPLETED }),
+      );
+    await completed([item('smash', 2), item('fries', 1)]);
+    await completed([item('fries', 3)]);
+    await completed([item('smash', 9)], 'store-2');
+    await orderRepositoryWrite.createOrder(
+      anOrderFixture({ items: [item('cola', 5)] }),
+    );
+
+    const ranking = await orderRepositoryRead.listBestSellers(
+      'store-1',
+      new Date(Date.now() - 60_000),
+      10,
+    );
+
+    expect(ranking).toEqual([
+      { productId: 'fries', soldCount: 4 },
+      { productId: 'smash', soldCount: 2 },
+    ]);
+  });
+});
