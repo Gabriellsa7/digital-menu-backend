@@ -4,6 +4,7 @@ import { IOption, IOptionGroup } from './interfaces/option-group.interface';
 
 export class OptionGroup implements IOptionGroup {
   public readonly id: string;
+  public readonly storeId: string;
   public readonly name: string;
   public readonly minSelections: number;
   public readonly maxSelections: number;
@@ -14,6 +15,7 @@ export class OptionGroup implements IOptionGroup {
 
   constructor(props: IOptionGroup) {
     this.id = props.id;
+    this.storeId = props.storeId;
     this.name = props.name.trim();
     this.minSelections = props.minSelections;
     this.maxSelections = props.maxSelections;

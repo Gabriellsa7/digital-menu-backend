@@ -43,24 +43,32 @@ export class OptionGroupService implements IOptionGroupService {
   }
 
   @ErrorHandler()
-  async listOptionGroups(): Promise<IOptionGroup[]> {
-    return this.optionGroupRepositoryRead.listOptionGroups();
+  async listOptionGroups(storeId: string): Promise<IOptionGroup[]> {
+    return this.optionGroupRepositoryRead.listOptionGroups(storeId);
   }
 
   @ErrorHandler()
-  async getOptionGroupById(id: string): Promise<IOptionGroup> {
+  async getOptionGroupById(
+    storeId: string,
+    id: string,
+  ): Promise<IOptionGroup> {
     const optionGroup =
       await this.optionGroupRepositoryRead.findOptionGroupById(id);
 
-    return optionGroup ? optionGroup : this.throwOptionGroupNotFound();
+    return optionGroup?.storeId === storeId
+      ? optionGroup
+      : this.throwOptionGroupNotFound();
   }
 
   @ErrorHandler()
-  async findOptionGroupsByIds(ids: string[]): Promise<IOptionGroup[]> {
+  async findOptionGroupsByIds(
+    storeId: string,
+    ids: string[],
+  ): Promise<IOptionGroup[]> {
     if (ids.length === 0) {
       return [];
     }
-    return this.optionGroupRepositoryRead.findOptionGroupsByIds(ids);
+    return this.optionGroupRepositoryRead.findOptionGroupsByIds(storeId, ids);
   }
 
   @ErrorHandler()
@@ -81,10 +89,11 @@ export class OptionGroupService implements IOptionGroupService {
 
   @ErrorHandler()
   async updateOptionGroup({
+    storeId,
     id,
     ...params
   }: IParamsUpdateOptionGroup): Promise<IOptionGroup> {
-    const current = await this.getOptionGroupById(id);
+    const current = await this.getOptionGroupById(storeId, id);
     const { createdAt, updatedAt, ...fields } = new OptionGroup({
       ...current,
       ...params,
@@ -99,8 +108,8 @@ export class OptionGroupService implements IOptionGroupService {
   }
 
   @ErrorHandler()
-  async deleteOptionGroup(id: string): Promise<void> {
-    await this.getOptionGroupById(id);
+  async deleteOptionGroup(storeId: string, id: string): Promise<void> {
+    await this.getOptionGroupById(storeId, id);
     const productCount =
       await this.optionGroupUsage.countProductsUsingOptionGroup(id);
     if (productCount > 0) {
@@ -115,13 +124,14 @@ export class OptionGroupService implements IOptionGroupService {
 
   @ErrorHandler()
   async setOptionAvailability({
+    storeId,
     optionGroupId,
     optionId,
     isAvailable,
   }: IParamsSetOptionAvailability): Promise<IOptionGroup> {
-    new OptionGroup(await this.getOptionGroupById(optionGroupId)).findOption(
-      optionId,
-    );
+    new OptionGroup(
+      await this.getOptionGroupById(storeId, optionGroupId),
+    ).findOption(optionId);
 
     const updated = await this.optionGroupRepositoryWrite.setOptionAvailability(
       optionGroupId,

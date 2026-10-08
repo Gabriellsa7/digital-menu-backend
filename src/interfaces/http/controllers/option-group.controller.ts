@@ -5,7 +5,7 @@ import {
   IOptionGroupService,
   IParamsOptionGroupData,
 } from '../../../domain/option-group/interfaces/option-group.service.interface';
-import { createAuthGuards } from '../middlewares/auth-guards';
+import { createAuthGuards, staffStoreId } from '../middlewares/auth-guards';
 import { toOptionGroupResponse } from '../presenters/option-group.presenter';
 
 type TIdParams = { id: string };
@@ -46,12 +46,14 @@ export class OptionGroupController implements IController {
   }
 
   list = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const optionGroups = await this.optionGroupService.listOptionGroups();
+      const optionGroups = await this.optionGroupService.listOptionGroups(
+        staffStoreId(req),
+      );
       res.status(200).json(optionGroups.map(toOptionGroupResponse));
     } catch (error) {
       next(error);
@@ -65,6 +67,7 @@ export class OptionGroupController implements IController {
   ): Promise<void> => {
     try {
       const optionGroup = await this.optionGroupService.getOptionGroupById(
+        staffStoreId(req),
         req.params.id,
       );
       res.status(200).json(toOptionGroupResponse(optionGroup));
@@ -80,7 +83,7 @@ export class OptionGroupController implements IController {
   ): Promise<void> => {
     try {
       const optionGroup = await this.optionGroupService.createOptionGroup(
-        this.groupData(req.body),
+        this.groupData(req),
       );
       res.status(201).json(toOptionGroupResponse(optionGroup));
     } catch (error) {
@@ -96,7 +99,7 @@ export class OptionGroupController implements IController {
     try {
       const optionGroup = await this.optionGroupService.updateOptionGroup({
         id: req.params.id,
-        ...this.groupData(req.body),
+        ...this.groupData(req),
       });
       res.status(200).json(toOptionGroupResponse(optionGroup));
     } catch (error) {
@@ -110,7 +113,10 @@ export class OptionGroupController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      await this.optionGroupService.deleteOptionGroup(req.params.id);
+      await this.optionGroupService.deleteOptionGroup(
+        staffStoreId(req),
+        req.params.id,
+      );
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -124,6 +130,7 @@ export class OptionGroupController implements IController {
   ): Promise<void> => {
     try {
       const optionGroup = await this.optionGroupService.setOptionAvailability({
+        storeId: staffStoreId(req),
         optionGroupId: req.params.id,
         optionId: req.params.optionId,
         isAvailable: req.body.isAvailable,
@@ -138,8 +145,10 @@ export class OptionGroupController implements IController {
     return this.router;
   }
 
-  private groupData(body: IParamsOptionGroupData): IParamsOptionGroupData {
+  private groupData(req: Request): IParamsOptionGroupData {
+    const body: IParamsOptionGroupData = req.body;
     return {
+      storeId: staffStoreId(req),
       name: body.name,
       minSelections: body.minSelections,
       maxSelections: body.maxSelections,

@@ -11,15 +11,18 @@ export class OptionGroupRepositoryRead implements IOptionGroupRepositoryRead {
     ).lean<IOptionGroup>();
   }
 
-  async findOptionGroupsByIds(ids: string[]): Promise<IOptionGroup[]> {
+  async findOptionGroupsByIds(
+    storeId: string,
+    ids: string[],
+  ): Promise<IOptionGroup[]> {
     return MoptionGroup.find(
-      { id: { $in: ids } },
+      { storeId, id: { $in: ids } },
       HIDE_MONGO_INTERNAL_FIELDS,
     ).lean<IOptionGroup[]>();
   }
 
-  async listOptionGroups(): Promise<IOptionGroup[]> {
-    return MoptionGroup.find({}, HIDE_MONGO_INTERNAL_FIELDS)
+  async listOptionGroups(storeId: string): Promise<IOptionGroup[]> {
+    return MoptionGroup.find({ storeId }, HIDE_MONGO_INTERNAL_FIELDS)
       .sort({ name: 1 })
       .lean<IOptionGroup[]>();
   }

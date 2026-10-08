@@ -7,6 +7,7 @@ export interface IOption {
 
 export interface IOptionGroup {
   id: string;
+  storeId: string;
   name: string;
   minSelections: number;
   maxSelections: number;

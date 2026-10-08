@@ -44,6 +44,7 @@ function aProduct(id: string, overrides: Partial<IProduct> = {}): IProduct {
 function aGroup(id: string, overrides: Partial<IOptionGroup> = {}): IOptionGroup {
   return {
     id,
+    storeId: 'store-1',
     name: id,
     minSelections: 0,
     maxSelections: 2,

@@ -193,8 +193,10 @@ export class OrderPricingService implements IOrderPricingService {
       productIds,
     );
     const groupIds = [...new Set(products.flatMap((p) => p.optionGroupIds))];
-    const optionGroups =
-      await this.optionGroupService.findOptionGroupsByIds(groupIds);
+    const optionGroups = await this.optionGroupService.findOptionGroupsByIds(
+      storeId,
+      groupIds,
+    );
     return buildOrderItems(items, products, optionGroups);
   }
 

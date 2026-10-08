@@ -35,6 +35,7 @@ function aProduct(overrides: Partial<IProduct> = {}): IProduct {
 function aGroup(id: string, minSelections = 0): IOptionGroup {
   return {
     id,
+    storeId: 'store-1',
     name: id,
     minSelections,
     maxSelections: 1,
@@ -74,7 +75,7 @@ beforeEach(() => {
   };
   categoryService = { getCategoryById: jest.fn() };
   optionGroupService = {
-    findOptionGroupsByIds: jest.fn(async (ids: string[]) =>
+    findOptionGroupsByIds: jest.fn(async (_storeId: string, ids: string[]) =>
       ids.map((id) => aGroup(id)),
     ),
   };

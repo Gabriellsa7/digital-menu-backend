@@ -52,7 +52,7 @@ async function seedCatalog(): Promise<void> {
   const { id: storeId } =
     await StoreServiceFactory.create().ensureDefaultStore();
 
-  const existingGroups = await optionGroupService.listOptionGroups();
+  const existingGroups = await optionGroupService.listOptionGroups(storeId);
   const groupIds = new Map<string, string>();
   for (const group of OPTION_GROUPS_SEED) {
     const existing = existingGroups.find(({ name }) => name === group.name);
@@ -60,6 +60,7 @@ async function seedCatalog(): Promise<void> {
       existing ??
       (await optionGroupService.createOptionGroup({
         ...group,
+        storeId,
         options: group.options.map(([name, priceInCents]) => ({
           name,
           priceInCents,

@@ -229,16 +229,20 @@ export class ProductService implements IProductService {
       product.categoryId,
     );
     const optionGroups = await this.findOptionGroupsOrThrow(
+      product.storeId,
       product.optionGroupIds,
     );
     product.assertPricing(optionGroups);
   }
 
   private async findOptionGroupsOrThrow(
+    storeId: string,
     optionGroupIds: string[],
   ): Promise<IOptionGroup[]> {
-    const optionGroups =
-      await this.optionGroupService.findOptionGroupsByIds(optionGroupIds);
+    const optionGroups = await this.optionGroupService.findOptionGroupsByIds(
+      storeId,
+      optionGroupIds,
+    );
     const foundIds = new Set(optionGroups.map(({ id }) => id));
     const missingIds = optionGroupIds.filter((id) => !foundIds.has(id));
     if (missingIds.length > 0) {

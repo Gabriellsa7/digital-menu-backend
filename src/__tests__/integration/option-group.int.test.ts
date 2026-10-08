@@ -1,6 +1,7 @@
 import { MoptionGroup } from '../../infrastructure/db/mongo/models/option-group.model';
 import { as } from '../helpers/http.helper';
-import { loginAs } from '../helpers/staff-session.helper';
+import { EStaffRole } from '../../domain/staff-user/interfaces/staff-user.interface';
+import { createStore, loginAs } from '../helpers/staff-session.helper';
 
 const A_GROUP = {
   name: 'Ponto da carne',
@@ -82,5 +83,31 @@ describe('When staff manages option groups', () => {
     expect(body.options[1].isAvailable).toBe(false);
     expect(body.options[0].isAvailable).toBe(true);
     expect(unknown.statusCode).toBe(404);
+  });
+});
+
+describe('When two stores manage option groups (TEN-R04)', () => {
+  it('should hide the groups of one store from the other', async () => {
+    const otherStore = await createStore('Pizza Boa');
+    const { accessToken: otherToken } = await loginAs(
+      EStaffRole.STAFF,
+      otherStore.id,
+    );
+    const created = await as(staffToken)
+      .post('/admin/option-groups')
+      .send(A_GROUP);
+
+    const listed = await as(otherToken).get('/admin/option-groups');
+    const read = await as(otherToken).get(
+      `/admin/option-groups/${created.body.id}`,
+    );
+    const deleted = await as(otherToken).delete(
+      `/admin/option-groups/${created.body.id}`,
+    );
+
+    expect(listed.body).toEqual([]);
+    expect(read.statusCode).toBe(404);
+    expect(deleted.statusCode).toBe(404);
+    await expect(MoptionGroup.countDocuments()).resolves.toBe(1);
   });
 });

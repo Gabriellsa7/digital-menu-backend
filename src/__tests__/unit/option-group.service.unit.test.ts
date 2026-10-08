@@ -8,6 +8,7 @@ import { FixedClock } from '../helpers/fixed.clock';
 
 const clock = new FixedClock();
 const GROUP_DATA = {
+  storeId: 'store-1',
   name: 'Adicionais',
   minSelections: 0,
   maxSelections: 3,
@@ -104,17 +105,32 @@ describe('When we update an option group', () => {
   });
 });
 
+describe('When an option group of another store is used (TEN-R04)', () => {
+  it('should answer not found without deleting it', async () => {
+    optionGroupRepositoryRead.findOptionGroupById.mockResolvedValue(
+      aGroup({ storeId: 'store-2' }),
+    );
+
+    await expect(
+      optionGroupService.deleteOptionGroup('store-1', 'group-1'),
+    ).rejects.toThrow(NotFoundError);
+    expect(
+      optionGroupRepositoryWrite.deleteOptionGroupById,
+    ).not.toHaveBeenCalled();
+  });
+});
+
 describe('When we delete an option group', () => {
   it('should block a group linked to products (OPT-R04)', async () => {
     optionGroupUsage.countProductsUsingOptionGroup.mockResolvedValue(1);
 
     await expect(
-      optionGroupService.deleteOptionGroup('group-1'),
+      optionGroupService.deleteOptionGroup('store-1', 'group-1'),
     ).rejects.toMatchObject({ code: 'OPTION_GROUP_IN_USE' });
   });
 
   it('should delete an unused group', async () => {
-    await optionGroupService.deleteOptionGroup('group-1');
+    await optionGroupService.deleteOptionGroup('store-1', 'group-1');
 
     expect(
       optionGroupRepositoryWrite.deleteOptionGroupById,
@@ -125,6 +141,7 @@ describe('When we delete an option group', () => {
 describe('When we toggle an option as sold out', () => {
   it('should update the option availability', async () => {
     await optionGroupService.setOptionAvailability({
+      storeId: 'store-1',
       optionGroupId: 'group-1',
       optionId: 'bacon',
       isAvailable: false,
@@ -138,6 +155,7 @@ describe('When we toggle an option as sold out', () => {
   it('should throw NotFoundError for an unknown option', async () => {
     await expect(
       optionGroupService.setOptionAvailability({
+        storeId: 'store-1',
         optionGroupId: 'group-1',
         optionId: 'missing',
         isAvailable: false,
@@ -146,9 +164,9 @@ describe('When we toggle an option as sold out', () => {
   });
 
   it('should not query the database for an empty id list', async () => {
-    await expect(optionGroupService.findOptionGroupsByIds([])).resolves.toEqual(
-      [],
-    );
+    await expect(
+      optionGroupService.findOptionGroupsByIds('store-1', []),
+    ).resolves.toEqual([]);
     expect(
       optionGroupRepositoryRead.findOptionGroupsByIds,
     ).not.toHaveBeenCalled();
