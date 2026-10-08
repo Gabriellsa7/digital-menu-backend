@@ -1,7 +1,11 @@
 import supertest from 'supertest';
 import { app } from '../../../jest/setup-integration-tests';
 import { CategoryServiceFactory } from '../../infrastructure/config/factories/category.service.factory';
+import { ECouponType } from '../../domain/coupon/interfaces/coupon.interface';
+import { CouponServiceFactory } from '../../infrastructure/config/factories/coupon.service.factory';
+import { ProductServiceFactory } from '../../infrastructure/config/factories/product.service.factory';
 import { StoreServiceFactory } from '../../infrastructure/config/factories/store.service.factory';
+import { Mcoupon } from '../../infrastructure/db/mongo/models/coupon.model';
 import {
   clearCatalog,
   createCategory,
@@ -55,7 +59,11 @@ describe('When a visitor opens the menu', () => {
       {
         name: 'Burgers',
         products: [
-          { name: 'Smash', fromPriceInCents: 3000, optionGroups: [{ name: 'Pão' }] },
+          {
+            name: 'Smash',
+            fromPriceInCents: 3000,
+            optionGroups: [{ name: 'Pão' }],
+          },
           { name: 'Salada', isAvailable: false },
         ],
       },
@@ -100,5 +108,42 @@ describe('When a visitor opens the menu', () => {
     expect(menu.body.categories).toEqual([]);
     expect(product.statusCode).toBe(404);
     expect(unknownStore.body.code).toBe('STORE_NOT_FOUND');
+  });
+
+  it('should serve the store home with featured products and public coupons', async () => {
+    const burgers = await createCategory('Burgers');
+    const smash = await createProduct(burgers.id, { name: 'Smash' });
+    await ProductServiceFactory.create().setProductFeatured({
+      storeId: smash.storeId,
+      id: smash.id,
+      isFeatured: true,
+    });
+    await Mcoupon.deleteMany({});
+    await CouponServiceFactory.create().createCoupon({
+      storeId: smash.storeId,
+      code: 'BEMVINDO',
+      type: ECouponType.FIXED,
+      value: 1000,
+      minOrderInCents: 0,
+      startsAt: new Date(Date.now() - 60_000),
+      expiresAt: new Date(Date.now() + 86_400_000),
+      usagePerCustomer: 1,
+      firstOrderOnly: true,
+      isActive: true,
+      isPublic: true,
+    });
+
+    const { body, statusCode } = await supertest(app.app).get(
+      `/public/stores/${slug}/home`,
+    );
+
+    expect(statusCode).toBe(200);
+    expect(body).toMatchObject({
+      featured: [{ id: smash.id, isNew: true }],
+      bestSellers: [],
+      newArrivals: [{ id: smash.id }],
+      publicCoupons: [{ code: 'BEMVINDO', firstOrderOnly: true }],
+      categories: [{ name: 'Burgers', productCount: 1 }],
+    });
   });
 });
