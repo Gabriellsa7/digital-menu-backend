@@ -20,9 +20,22 @@ export const productSchema = new mongoose.Schema<IMProduct>(
     isActive: { type: Boolean, required: true },
     position: { type: Number, required: true },
     servesPeople: { type: Number },
+    promotion: {
+      type: new mongoose.Schema(
+        {
+          priceInCents: { type: Number, required: true },
+          startsAt: { type: Date, required: true },
+          endsAt: { type: Date, required: true },
+        },
+        { _id: false },
+      ),
+    },
+    isFeatured: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
 
 productSchema.index({ storeId: 1, categoryId: 1, position: 1 });
 productSchema.index({ optionGroupIds: 1 });
+productSchema.index({ storeId: 1, isFeatured: 1 });
+productSchema.index({ storeId: 1, 'promotion.endsAt': 1 });

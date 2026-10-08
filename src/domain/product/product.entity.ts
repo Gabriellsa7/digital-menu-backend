@@ -1,6 +1,6 @@
 import { BusinessRuleError } from '../errors/business-rule.error';
 import { IOptionGroup } from '../option-group/interfaces/option-group.interface';
-import { IProduct } from './interfaces/product.interface';
+import { IProduct, IProductPromotion } from './interfaces/product.interface';
 
 export class Product implements IProduct {
   public readonly id: string;
@@ -16,6 +16,8 @@ export class Product implements IProduct {
   public readonly isActive: boolean;
   public readonly position: number;
   public readonly servesPeople?: number;
+  public readonly promotion?: IProductPromotion;
+  public readonly isFeatured: boolean;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
@@ -33,6 +35,8 @@ export class Product implements IProduct {
     this.isActive = props.isActive;
     this.position = props.position;
     this.servesPeople = props.servesPeople;
+    this.promotion = props.promotion;
+    this.isFeatured = props.isFeatured;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }

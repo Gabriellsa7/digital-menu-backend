@@ -17,4 +17,5 @@ export interface IProductRepositoryRead {
   listProductsInCategory(categoryId: string): Promise<IProduct[]>;
   listActiveProducts(storeId: string): Promise<IProduct[]>;
   findMaxPositionInCategory(categoryId: string): Promise<number>;
+  countFeaturedProducts(storeId: string): Promise<number>;
 }

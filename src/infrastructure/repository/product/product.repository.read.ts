@@ -73,6 +73,10 @@ export class ProductRepositoryRead implements IProductRepositoryRead {
       .lean<IProduct[]>();
   }
 
+  async countFeaturedProducts(storeId: string): Promise<number> {
+    return Mproduct.countDocuments({ storeId, isFeatured: true });
+  }
+
   async findMaxPositionInCategory(categoryId: string): Promise<number> {
     const last = await Mproduct.findOne({ categoryId }, { position: 1 })
       .sort({ position: -1 })

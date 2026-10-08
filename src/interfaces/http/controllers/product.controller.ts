@@ -53,6 +53,17 @@ export class ProductController implements IController {
     );
     this.router.delete('/admin/products/:id/image', ...staff, this.removeImage);
     this.router.put(
+      '/admin/products/:id/promotion',
+      ...staff,
+      this.setPromotion,
+    );
+    this.router.delete(
+      '/admin/products/:id/promotion',
+      ...staff,
+      this.removePromotion,
+    );
+    this.router.patch('/admin/products/:id/featured', ...staff, this.setFeatured);
+    this.router.put(
       '/admin/categories/:id/products/order',
       ...staff,
       this.reorder,
@@ -206,6 +217,60 @@ export class ProductController implements IController {
         staffStoreId(req),
         req.params.id,
       );
+      res.status(200).json(toProductResponse(product));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  setPromotion = async (
+    req: Request<TIdParams>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const product = await this.productService.setProductPromotion({
+        storeId: staffStoreId(req),
+        id: req.params.id,
+        promotion: {
+          priceInCents: req.body.priceInCents,
+          startsAt: new Date(req.body.startsAt),
+          endsAt: new Date(req.body.endsAt),
+        },
+      });
+      res.status(200).json(toProductResponse(product));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  removePromotion = async (
+    req: Request<TIdParams>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const product = await this.productService.removeProductPromotion(
+        staffStoreId(req),
+        req.params.id,
+      );
+      res.status(200).json(toProductResponse(product));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  setFeatured = async (
+    req: Request<TIdParams>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const product = await this.productService.setProductFeatured({
+        storeId: staffStoreId(req),
+        id: req.params.id,
+        isFeatured: req.body.isFeatured,
+      });
       res.status(200).json(toProductResponse(product));
     } catch (error) {
       next(error);

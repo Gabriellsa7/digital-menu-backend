@@ -1540,6 +1540,108 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /admin/products/{id}/promotion:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Catalog
+      summary: Set the promotion of a product
+      operationId: setProductPromotion
+      description: The price must be above 0 and below the product price, and the period at most 60 days (PRM-R01).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductPromotion'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - Catalog
+      summary: End the promotion of a product
+      operationId: removeProductPromotion
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/products/{id}/featured:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags:
+        - Catalog
+      summary: Feature a product on the store home
+      operationId: setProductFeatured
+      description: At most 5 featured products per store (FEATURED_LIMIT, HOM-R01).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - isFeatured
+              properties:
+                isFeatured:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
   /admin/categories/{id}/products/order:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3288,7 +3390,29 @@ components:
           type: integer
         servesPeople:
           type: integer
+        promotion:
+          $ref: '#/components/schemas/ProductPromotion'
+        isFeatured:
+          type: boolean
+          description: Shown in the store home carousel (HOM-R01)
         createdAt:
+          type: string
+          format: date-time
+    ProductPromotion:
+      type: object
+      additionalProperties: false
+      required:
+        - priceInCents
+        - startsAt
+        - endsAt
+      properties:
+        priceInCents:
+          type: integer
+          minimum: 1
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
           type: string
           format: date-time
     ProductList:

@@ -133,3 +133,29 @@ describe('When staff deletes catalog items still in use', () => {
     expect(body.code).toBe('OPTION_GROUP_IN_USE');
   });
 });
+
+describe('When staff runs a promotion (PRM-R01..R03)', () => {
+  it('should validate and save the promotion and the featured flag', async () => {
+    const category = await createCategory('Burgers');
+    const smash = await createProduct(category.id, { priceInCents: 3000 });
+    const now = Date.now();
+    const period = {
+      startsAt: new Date(now - 60_000).toISOString(),
+      endsAt: new Date(now + 86_400_000).toISOString(),
+    };
+
+    const invalid = await as(staffToken)
+      .put(`/admin/products/${smash.id}/promotion`)
+      .send({ ...period, priceInCents: 3000 });
+    const saved = await as(staffToken)
+      .put(`/admin/products/${smash.id}/promotion`)
+      .send({ ...period, priceInCents: 2400 });
+    const featured = await as(staffToken)
+      .patch(`/admin/products/${smash.id}/featured`)
+      .send({ isFeatured: true });
+
+    expect(invalid.body.code).toBe('INVALID_PROMOTION_PRICE');
+    expect(saved.body.promotion).toMatchObject({ priceInCents: 2400 });
+    expect(featured.body.isFeatured).toBe(true);
+  });
+});

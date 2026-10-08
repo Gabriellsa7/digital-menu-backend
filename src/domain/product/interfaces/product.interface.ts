@@ -1,3 +1,9 @@
+export interface IProductPromotion {
+  priceInCents: number;
+  startsAt: Date;
+  endsAt: Date;
+}
+
 export interface IProduct {
   id: string;
   storeId: string;
@@ -12,6 +18,8 @@ export interface IProduct {
   isActive: boolean;
   position: number;
   servesPeople?: number;
+  promotion?: IProductPromotion;
+  isFeatured: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

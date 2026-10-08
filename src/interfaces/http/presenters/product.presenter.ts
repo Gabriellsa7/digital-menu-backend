@@ -1,4 +1,7 @@
-import { IProduct } from '../../../domain/product/interfaces/product.interface';
+import {
+  IProduct,
+  IProductPromotion,
+} from '../../../domain/product/interfaces/product.interface';
 
 export interface IProductResponse {
   id: string;
@@ -12,6 +15,8 @@ export interface IProductResponse {
   isActive: boolean;
   position: number;
   servesPeople?: number;
+  promotion?: IProductPromotion;
+  isFeatured: boolean;
   createdAt: Date;
 }
 
@@ -30,6 +35,14 @@ export function toProductResponse(product: IProduct): IProductResponse {
     ...(product.servesPeople !== undefined && {
       servesPeople: product.servesPeople,
     }),
+    ...(product.promotion && {
+      promotion: {
+        priceInCents: product.promotion.priceInCents,
+        startsAt: product.promotion.startsAt,
+        endsAt: product.promotion.endsAt,
+      },
+    }),
+    isFeatured: product.isFeatured,
     createdAt: product.createdAt,
   };
 }
