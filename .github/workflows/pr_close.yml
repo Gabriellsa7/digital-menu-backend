@@ -1,0 +1,31 @@
+name: PR Close
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    name: Clean up PR caches
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR_REF: refs/pull/${{ github.event.pull_request.number }}/merge
+    steps:
+      - name: Delete Actions caches of the PR
+        run: |
+          gh cache list --ref "$PR_REF" --limit 100 --json id --jq '.[].id' |
+            while read -r id; do gh cache delete "$id"; done
+
+      - name: Summary
+        run: |
+          if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+            echo "PR #${{ github.event.pull_request.number }} merged into ${{ github.event.pull_request.base.ref }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "PR #${{ github.event.pull_request.number }} closed without merge" >> "$GITHUB_STEP_SUMMARY"
+          fi

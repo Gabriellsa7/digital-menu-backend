@@ -1,0 +1,83 @@
+name: Push Main
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Build
+        run: yarn build
+
+  test:
+    name: Tests with coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Tests with coverage threshold (80% lines/branches, merged)
+        run: yarn test:coverage
+
+  deploy:
+    name: Deploy to Render
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_API_URL }}
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
+    steps:
+      - name: Trigger deploy
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL is not set, skipping deploy"
+            exit 0
+          fi
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
+
+      - name: Wait for health check
+        if: ${{ env.RENDER_DEPLOY_HOOK_URL != '' && env.PRODUCTION_API_URL != '' }}
+        run: |
+          for attempt in $(seq 1 40); do
+            if curl -fsS "$PRODUCTION_API_URL/health" > /dev/null; then
+              echo "API is healthy"
+              exit 0
+            fi
+            echo "Waiting for the API ($attempt/40)"
+            sleep 15
+          done
+          echo "::error::API did not become healthy in 10 minutes"
+          exit 1
