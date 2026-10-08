@@ -24,7 +24,11 @@ export class SocketOrderPublisher implements IOrderEventPublisher {
       fulfillmentType: order.fulfillmentType,
       createdAt: order.createdAt.toISOString(),
     };
-    this.emitter.emit([WS_ROOMS.STORE_STAFF], WS_EVENTS.ORDER_CREATED, payload);
+    this.emitter.emit(
+      [WS_ROOMS.storeStaff(order.storeId)],
+      WS_EVENTS.ORDER_CREATED,
+      payload,
+    );
   }
 
   publishOrderStatusChanged(order: IOrder, previousStatus: EOrderStatus): void {
@@ -41,7 +45,10 @@ export class SocketOrderPublisher implements IOrderEventPublisher {
       ...(lastEntry?.reason && { reason: lastEntry.reason }),
     };
     this.emitter.emit(
-      [WS_ROOMS.STORE_STAFF, WS_ROOMS.customer(order.customerId)],
+      [
+        WS_ROOMS.storeStaff(order.storeId),
+        WS_ROOMS.customer(order.customerId),
+      ],
       WS_EVENTS.ORDER_STATUS_CHANGED,
       payload,
     );
@@ -53,7 +60,10 @@ export class SocketOrderPublisher implements IOrderEventPublisher {
       paymentStatus: order.payment.status,
     };
     this.emitter.emit(
-      [WS_ROOMS.STORE_STAFF, WS_ROOMS.customer(order.customerId)],
+      [
+        WS_ROOMS.storeStaff(order.storeId),
+        WS_ROOMS.customer(order.customerId),
+      ],
       WS_EVENTS.ORDER_PAYMENT_UPDATED,
       payload,
     );

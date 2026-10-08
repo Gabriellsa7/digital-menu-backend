@@ -5,7 +5,7 @@ import {
   ISocketTestServer,
   startSocketTestServer,
 } from '../helpers/socket.helper';
-import { loginAs } from '../helpers/staff-session.helper';
+import { createStore, loginAs } from '../helpers/staff-session.helper';
 
 let server: ISocketTestServer;
 
@@ -24,31 +24,42 @@ afterEach(async () => {
 });
 
 describe('When a client connects to the realtime server', () => {
-  it('should put an anonymous client only in the public room', async () => {
-    const client = await server.connectClient();
+  it('should put an anonymous client only in the public room of the store', async () => {
+    const store = await createStore('Casa Brasa');
 
-    await expect(roomsOf(client.id!)).resolves.toEqual(['store:public']);
-  });
-
-  it('should put a staff client in the staff room', async () => {
-    const { accessToken } = await loginAs(EStaffRole.STAFF);
-
-    const client = await server.connectClient(accessToken);
+    const client = await server.connectClient(undefined, store.slug);
 
     await expect(roomsOf(client.id!)).resolves.toEqual([
-      'store:public',
-      'store:staff',
+      `store:${store.id}:public`,
     ]);
   });
 
-  it('should put a customer only in the own room', async () => {
-    const { accessToken, customerId } = await loginCustomerWithOtp();
+  it('should reject an unknown store slug with STORE_NOT_FOUND', async () => {
+    await expect(
+      server.connectClient(undefined, 'unknown-store'),
+    ).rejects.toThrow('STORE_NOT_FOUND');
+  });
+
+  it('should put a staff client in the rooms of the token store', async () => {
+    const { accessToken, staffUser } = await loginAs(EStaffRole.STAFF);
 
     const client = await server.connectClient(accessToken);
 
     await expect(roomsOf(client.id!)).resolves.toEqual([
+      `store:${staffUser.storeId}:public`,
+      `store:${staffUser.storeId}:staff`,
+    ]);
+  });
+
+  it('should put a customer in the own room and the visited store', async () => {
+    const store = await createStore('Casa Brasa');
+    const { accessToken, customerId } = await loginCustomerWithOtp();
+
+    const client = await server.connectClient(accessToken, store.slug);
+
+    await expect(roomsOf(client.id!)).resolves.toEqual([
       `customer:${customerId}`,
-      'store:public',
+      `store:${store.id}:public`,
     ]);
   });
 
