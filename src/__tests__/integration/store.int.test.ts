@@ -15,7 +15,7 @@ beforeEach(async () => {
 });
 
 describe('When anyone reads the public store', () => {
-  it('should bootstrap the store with defaults on the first GET (STO-R01)', async () => {
+  it('should bootstrap a default store on the first GET', async () => {
     const first = await supertest(app.app).get('/public/store');
     const second = await supertest(app.app).get('/public/store');
 
@@ -118,7 +118,7 @@ describe('When staff toggles the store status', () => {
     await as(accessToken)
       .patch('/admin/store/status')
       .send({ manualStatus: 'FORCED_CLOSED' });
-    const { body } = await supertest(app.app).get('/public/store');
+    const { body } = await as(accessToken).get('/admin/store');
 
     expect(body.status.isOpenNow).toBe(false);
   });

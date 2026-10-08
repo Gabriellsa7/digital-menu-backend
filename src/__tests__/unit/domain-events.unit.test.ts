@@ -127,17 +127,22 @@ describe('When the store status job ticks (STO-R05)', () => {
     return { isOpenNow, manualStatus } as IStoreStatus;
   }
 
-  it('should publish only when the status flips', async () => {
-    const refreshStoreStatus = jest
+  it('should publish only when the status of a store flips', async () => {
+    const statuses: Record<string, IStoreStatus[]> = {
+      'store-a': [aStatus(false), aStatus(false), aStatus(true)],
+      'store-b': [aStatus(true), aStatus(true), aStatus(true)],
+    };
+    const refreshStoreStatus = jest.fn(async (storeId: string) =>
+      statuses[storeId].shift(),
+    );
+    const listActiveStores = jest
       .fn()
-      .mockResolvedValueOnce(aStatus(false))
-      .mockResolvedValueOnce(aStatus(false))
-      .mockResolvedValueOnce(aStatus(true));
+      .mockResolvedValue([{ id: 'store-a' }, { id: 'store-b' }]);
     const publisher = {
       publishStoreStatusChanged: jest.fn(),
     } as unknown as jest.Mocked<IStoreEventPublisher>;
     const job = new StoreStatusJob(
-      { refreshStoreStatus } as unknown as IStoreService,
+      { refreshStoreStatus, listActiveStores } as unknown as IStoreService,
       publisher,
     );
 
@@ -145,6 +150,7 @@ describe('When the store status job ticks (STO-R05)', () => {
     await job.run();
     await job.run();
 
+    expect(refreshStoreStatus).toHaveBeenCalledTimes(6);
     expect(publisher.publishStoreStatusChanged).toHaveBeenCalledTimes(1);
     expect(publisher.publishStoreStatusChanged).toHaveBeenCalledWith(
       aStatus(true),

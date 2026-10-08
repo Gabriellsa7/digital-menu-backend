@@ -51,7 +51,9 @@ export class OrderPricingService implements IOrderPricingService {
 
   @ErrorHandler()
   async quoteOrder(params: IParamsQuoteOrder): Promise<IOrderQuote> {
-    const store = await this.storeService.assertAcceptingOrders();
+    const store = await this.storeService.assertAcceptingOrders(
+      params.storeId,
+    );
     this.assertFulfillmentEnabled(store, params.fulfillmentType);
     assertCartSize(params.items);
     const { deliveryAddress, deliveryZone } =

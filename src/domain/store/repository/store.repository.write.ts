@@ -13,6 +13,9 @@ export interface IParamsUpdateStoreFields {
 }
 
 export interface IStoreRepositoryWrite {
-  createStoreIfMissing(store: IStore): Promise<IStore>;
-  updateStore(fields: IParamsUpdateStoreFields): Promise<IStore | null>;
+  createStore(store: IStore): Promise<IStore>;
+  updateStore(
+    id: string,
+    fields: IParamsUpdateStoreFields,
+  ): Promise<IStore | null>;
 }

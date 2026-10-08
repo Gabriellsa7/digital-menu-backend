@@ -31,6 +31,7 @@ const SMASH_WITH_BACON = {
 
 function aQuote(overrides: Partial<IParamsQuoteOrder> = {}): IParamsQuoteOrder {
   return {
+    storeId: 'store-1',
     customerId: 'customer-1',
     items: [SMASH_WITH_BACON],
     fulfillmentType: EFulfillmentType.DELIVERY,
@@ -58,6 +59,7 @@ const orderPricingService = new OrderPricingService({
 
 beforeEach(() => {
   storeService.assertAcceptingOrders.mockResolvedValue(aStoreFixture());
+
   customerService.getCustomerById.mockResolvedValue(aCustomerFixture());
   deliveryZoneService.getDeliveryZoneById.mockResolvedValue(
     aDeliveryZoneFixture(),

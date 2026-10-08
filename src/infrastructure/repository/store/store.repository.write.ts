@@ -5,27 +5,20 @@ import {
   IStoreRepositoryWrite,
 } from '../../../domain/store/repository/store.repository.write';
 import { Mstore } from '../../db/mongo/models/store.model';
-import {
-  HIDE_STORE_INTERNAL_FIELDS,
-  IMStore,
-  STORE_SINGLETON_FILTER,
-} from '../../db/mongo/schema/store.schema';
+import { HIDE_MONGO_INTERNAL_FIELDS } from '../../db/mongo/mongo.projection';
+import { IMStore } from '../../db/mongo/schema/store.schema';
 
 export class StoreRepositoryWrite implements IStoreRepositoryWrite {
-  async createStoreIfMissing(store: IStore): Promise<IStore> {
-    const { createdAt, updatedAt, ...fields } = store;
-    const created = await Mstore.findOneAndUpdate(
-      STORE_SINGLETON_FILTER,
-      { $setOnInsert: fields },
-      { upsert: true, new: true, projection: HIDE_STORE_INTERNAL_FIELDS },
-    ).lean<IStore>();
-    return created!;
+  async createStore(store: IStore): Promise<IStore> {
+    const created = await Mstore.create({ ...store });
+    const { _id, __v, ...createdStore } = created.toObject();
+    return createdStore;
   }
 
-  async updateStore({
-    set = {},
-    unset = [],
-  }: IParamsUpdateStoreFields): Promise<IStore | null> {
+  async updateStore(
+    id: string,
+    { set = {}, unset = [] }: IParamsUpdateStoreFields,
+  ): Promise<IStore | null> {
     const update: UpdateQuery<IMStore> = {};
     if (Object.keys(set).length > 0) {
       update.$set = set;
@@ -33,9 +26,9 @@ export class StoreRepositoryWrite implements IStoreRepositoryWrite {
     if (unset.length > 0) {
       update.$unset = Object.fromEntries(unset.map((field) => [field, '']));
     }
-    return Mstore.findOneAndUpdate(STORE_SINGLETON_FILTER, update, {
+    return Mstore.findOneAndUpdate({ id }, update, {
       new: true,
-      projection: HIDE_STORE_INTERNAL_FIELDS,
+      projection: HIDE_MONGO_INTERNAL_FIELDS,
     }).lean<IStore>();
   }
 }

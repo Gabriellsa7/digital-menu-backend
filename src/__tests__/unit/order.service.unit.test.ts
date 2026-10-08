@@ -40,6 +40,7 @@ function aCreateParams(
   overrides: Partial<IParamsCreateOrder> = {},
 ): IParamsCreateOrder {
   return {
+    storeId: 'store-1',
     customerId: 'customer-1',
     items: [{ productId: 'smash', quantity: 1, options: [] }],
     fulfillmentType: EFulfillmentType.PICKUP,

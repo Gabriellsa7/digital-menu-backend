@@ -19,6 +19,7 @@ import {
 } from '../interfaces/store.interface';
 import {
   EStoreImageKind,
+  IParamsCreateStore,
   IParamsStoreService,
   IParamsUpdateStore,
   IStoreService,
@@ -28,6 +29,7 @@ import {
   assertValidOpeningHours,
   nextBoundaryAfter,
 } from '../policies/opening-hours.policy';
+import { slugify } from '../policies/slug.policy';
 import { IStoreRepositoryRead } from '../repository/store.repository.read';
 import {
   IParamsUpdateStoreFields,
@@ -35,7 +37,8 @@ import {
 } from '../repository/store.repository.write';
 import { Store } from '../store.entity';
 
-const STORE_IMAGES_FOLDER = 'digital-menu/store';
+const STORE_IMAGES_FOLDER = 'digital-menu/stores';
+const DEFAULT_STORE_NAME = 'Digital Menu';
 
 export class StoreService implements IStoreService {
   private storeRepositoryRead: IStoreRepositoryRead;
@@ -59,29 +62,64 @@ export class StoreService implements IStoreService {
   }
 
   @ErrorHandler()
-  async getStore(): Promise<IStore> {
-    const store = await this.storeRepositoryRead.findStore();
-    if (store) {
-      return store;
-    }
-    const created = await this.storeRepositoryWrite.createStoreIfMissing(
-      Store.withDefaults(randomUUID(), this.clock.now()),
+  async createStore({
+    name,
+    slug,
+    isPublished = false,
+    ...settings
+  }: IParamsCreateStore): Promise<IStore> {
+    const storeSlug = slug ?? slugify(name);
+    const defaults = Store.withDefaults(randomUUID(), this.clock.now(), {
+      name: name.trim(),
+      slug: storeSlug,
+    });
+    Store.assertFulfillmentEnabled(
+      settings.deliveryEnabled ?? defaults.deliveryEnabled,
+      settings.pickupEnabled ?? defaults.pickupEnabled,
     );
-    Logger.info('Store bootstrapped with defaults', {
-      eventName: 'store.bootstrapped',
+    const created = await this.storeRepositoryWrite.createStore(
+      new Store({ ...defaults, ...this.definedFields(settings), isPublished }),
+    );
+    Logger.info('Store created', {
+      eventName: 'store.created',
+      storeId: created.id,
+      slug: created.slug,
     });
     return created;
   }
 
   @ErrorHandler()
-  async getStoreWithStatus(): Promise<IStoreWithStatus> {
-    const store = new Store(await this.getStore());
-    return { store, status: store.statusAt(this.clock.now()) };
+  async ensureDefaultStore(): Promise<IStore> {
+    const store = await this.storeRepositoryRead.findFirstStore();
+
+    return store
+      ? store
+      : this.createStore({ name: DEFAULT_STORE_NAME, isPublished: true });
   }
 
   @ErrorHandler()
-  async updateStore(params: IParamsUpdateStore): Promise<IStore> {
-    const store = await this.getStore();
+  async getStore(storeId: string): Promise<IStore> {
+    const store = await this.storeRepositoryRead.findStoreById(storeId);
+
+    return store ? store : this.throwStoreNotFound();
+  }
+
+  @ErrorHandler()
+  async getStoreWithStatus(storeId: string): Promise<IStoreWithStatus> {
+    return this.withStatus(await this.getStore(storeId));
+  }
+
+  @ErrorHandler()
+  async listActiveStores(): Promise<IStore[]> {
+    return this.storeRepositoryRead.listActiveStores();
+  }
+
+  @ErrorHandler()
+  async updateStore(
+    storeId: string,
+    params: IParamsUpdateStore,
+  ): Promise<IStore> {
+    const store = await this.getStore(storeId);
     Store.assertFulfillmentEnabled(
       params.deliveryEnabled ?? store.deliveryEnabled,
       params.pickupEnabled ?? store.pickupEnabled,
@@ -89,26 +127,26 @@ export class StoreService implements IStoreService {
     if (params.timezone !== undefined) {
       this.assertValidTimezone(params.timezone);
     }
-    const set = Object.fromEntries(
-      Object.entries(params).filter(([, value]) => value !== undefined),
-    );
-
-    return this.updateStoreFields({ set });
+    return this.updateStoreFields(storeId, { set: this.definedFields(params) });
   }
 
   @ErrorHandler()
-  async setOpeningHours(openingHours: IOpeningHour[]): Promise<IStore> {
-    await this.getStore();
+  async setOpeningHours(
+    storeId: string,
+    openingHours: IOpeningHour[],
+  ): Promise<IStore> {
+    await this.getStore(storeId);
     assertValidOpeningHours(openingHours);
 
-    return this.updateStoreFields({ set: { openingHours } });
+    return this.updateStoreFields(storeId, { set: { openingHours } });
   }
 
   @ErrorHandler()
   async setManualStatus(
+    storeId: string,
     manualStatus: EManualStatus,
   ): Promise<IStoreWithStatus> {
-    const store = await this.getStore();
+    const store = await this.getStore(storeId);
     const now = this.clock.now();
     const manualStatusUntil =
       manualStatus === EManualStatus.AUTO
@@ -116,7 +154,7 @@ export class StoreService implements IStoreService {
         : nextBoundaryAfter(store.openingHours, store.timezone, now);
 
     const updated = new Store(
-      await this.updateStoreFields({
+      await this.updateStoreFields(storeId, {
         set: { manualStatus, ...(manualStatusUntil && { manualStatusUntil }) },
         ...(!manualStatusUntil && { unset: ['manualStatusUntil'] }),
       }),
@@ -125,14 +163,15 @@ export class StoreService implements IStoreService {
     this.storeEventPublisher.publishStoreStatusChanged(status);
     Logger.info('Store manual status changed', {
       eventName: 'store.manual_status_changed',
+      storeId,
       manualStatus,
     });
     return { store: updated, status };
   }
 
   @ErrorHandler()
-  async assertAcceptingOrders(): Promise<IStore> {
-    const { store, status } = await this.getStoreWithStatus();
+  async assertAcceptingOrders(storeId: string): Promise<IStore> {
+    const { store, status } = await this.getStoreWithStatus(storeId);
     if (!status.isOpenNow) {
       throw new BusinessRuleError('Store is closed', 'STORE_CLOSED', {
         ...(status.nextOpeningAt && {
@@ -144,17 +183,18 @@ export class StoreService implements IStoreService {
   }
 
   @ErrorHandler()
-  async refreshStoreStatus(): Promise<IStoreStatus> {
-    const store = new Store(await this.getStore());
+  async refreshStoreStatus(storeId: string): Promise<IStoreStatus> {
+    const store = new Store(await this.getStore(storeId));
     const now = this.clock.now();
     const status = store.statusAt(now);
     if (store.manualStatus !== status.manualStatus) {
-      await this.updateStoreFields({
+      await this.updateStoreFields(storeId, {
         set: { manualStatus: EManualStatus.AUTO },
         unset: ['manualStatusUntil'],
       });
       Logger.info('Store manual status expired', {
         eventName: 'store.manual_status_expired',
+        storeId,
         manualStatus: store.manualStatus,
       });
     }
@@ -163,19 +203,20 @@ export class StoreService implements IStoreService {
 
   @ErrorHandler()
   async setStoreImage(
+    storeId: string,
     kind: EStoreImageKind,
     file?: IImageFile,
   ): Promise<IStore> {
     assertValidImage(file);
-    const store = await this.getStore();
+    const store = await this.getStore(storeId);
     const uploaded = await this.storageProvider.uploadImage({
       file,
-      folder: STORE_IMAGES_FOLDER,
+      folder: `${STORE_IMAGES_FOLDER}/${storeId}`,
     });
     const previousPublicId =
       kind === EStoreImageKind.LOGO ? store.logoPublicId : store.bannerPublicId;
 
-    const updated = await this.updateStoreFields({
+    const updated = await this.updateStoreFields(storeId, {
       set:
         kind === EStoreImageKind.LOGO
           ? { logoUrl: uploaded.url, logoPublicId: uploaded.publicId }
@@ -196,10 +237,25 @@ export class StoreService implements IStoreService {
     }
   }
 
+  private withStatus(store: IStore): IStoreWithStatus {
+    const entity = new Store(store);
+    return { store: entity, status: entity.statusAt(this.clock.now()) };
+  }
+
+  private definedFields<T extends object>(params: T): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(params).filter(([, value]) => value !== undefined),
+    ) as Partial<T>;
+  }
+
   private async updateStoreFields(
+    storeId: string,
     fields: IParamsUpdateStoreFields,
   ): Promise<IStore> {
-    const updated = await this.storeRepositoryWrite.updateStore(fields);
+    const updated = await this.storeRepositoryWrite.updateStore(
+      storeId,
+      fields,
+    );
 
     return updated ? updated : this.throwStoreNotFound();
   }

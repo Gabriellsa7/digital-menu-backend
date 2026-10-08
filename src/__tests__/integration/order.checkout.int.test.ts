@@ -7,6 +7,7 @@ let checkout: Awaited<ReturnType<typeof setupCheckout>>;
 
 function aCart(overrides: Record<string, unknown> = {}) {
   return {
+    storeId: checkout.storeId,
     items: [
       {
         productId: checkout.smash.id,
@@ -101,14 +102,19 @@ describe('When a customer places an order', () => {
     [
       'the store is closed (ORD-R01)',
       async () =>
-        checkout.storeService.setManualStatus(EManualStatus.FORCED_CLOSED),
+        checkout.storeService.setManualStatus(
+          checkout.storeId,
+          EManualStatus.FORCED_CLOSED,
+        ),
       {},
       'STORE_CLOSED',
     ],
     [
       'the subtotal is below the minimum (ORD-R04)',
       async () =>
-        checkout.storeService.updateStore({ minimumOrderInCents: 5000 }),
+        checkout.storeService.updateStore(checkout.storeId, {
+          minimumOrderInCents: 5000,
+        }),
       {},
       'BELOW_MINIMUM_ORDER',
     ],

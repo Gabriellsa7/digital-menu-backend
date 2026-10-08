@@ -5,7 +5,7 @@ import {
   EStoreImageKind,
   IStoreService,
 } from '../../../domain/store/interfaces/store.service.interface';
-import { createAuthGuards } from '../middlewares/auth-guards';
+import { createAuthGuards, staffStoreId } from '../middlewares/auth-guards';
 import {
   imageUpload,
   uploadedImage,
@@ -31,7 +31,7 @@ export class StoreController implements IController {
 
   initRoutes() {
     const { staff, owner } = createAuthGuards(this.tokenService);
-    this.router.get('/public/store', this.getStore);
+    this.router.get('/public/store', this.getPublicStore);
     this.router.get('/admin/store', ...staff, this.getStore);
     this.router.put('/admin/store', ...owner, this.updateStore);
     this.router.put(
@@ -48,13 +48,31 @@ export class StoreController implements IController {
     );
   }
 
-  getStore = async (
+  getPublicStore = async (
     _req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const storeWithStatus = await this.storeService.getStoreWithStatus();
+      const store = await this.storeService.ensureDefaultStore();
+      const storeWithStatus = await this.storeService.getStoreWithStatus(
+        store.id,
+      );
+      res.status(200).json(toStoreResponse(storeWithStatus));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getStore = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const storeWithStatus = await this.storeService.getStoreWithStatus(
+        staffStoreId(req),
+      );
       res.status(200).json(toStoreResponse(storeWithStatus));
     } catch (error) {
       next(error);
@@ -67,7 +85,7 @@ export class StoreController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      await this.storeService.updateStore(req.body);
+      await this.storeService.updateStore(staffStoreId(req), req.body);
       await this.getStore(req, res, next);
     } catch (error) {
       next(error);
@@ -80,7 +98,10 @@ export class StoreController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      await this.storeService.setOpeningHours(req.body.openingHours);
+      await this.storeService.setOpeningHours(
+        staffStoreId(req),
+        req.body.openingHours,
+      );
       await this.getStore(req, res, next);
     } catch (error) {
       next(error);
@@ -94,6 +115,7 @@ export class StoreController implements IController {
   ): Promise<void> => {
     try {
       const storeWithStatus = await this.storeService.setManualStatus(
+        staffStoreId(req),
         req.body.manualStatus,
       );
       res.status(200).json(toStoreResponse(storeWithStatus));
@@ -109,6 +131,7 @@ export class StoreController implements IController {
   ): Promise<void> => {
     try {
       await this.storeService.setStoreImage(
+        staffStoreId(req),
         req.params.kind,
         uploadedImage(req),
       );
